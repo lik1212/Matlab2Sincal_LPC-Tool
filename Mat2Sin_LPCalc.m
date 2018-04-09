@@ -132,7 +132,7 @@ TimeSetup = struct;
 TimeSetup.First_Moment       = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');
 TimeSetup.Last_Moment        = datetime('31.12.2015 23:50:00','Format','dd.MM.yyyy HH:mm:ss');
 TimeSetup.Time_Step          = 1; % Minutes
-TimeSetup.num_of_instants    = 52560;
+TimeSetup.num_of_instants    = 1440;
 Inputs.TimeSetup_num_of_instants = 1440; % 1440; % Temp, RB
 TimeSetup = Setting_Time_Parameters(TimeSetup,Inputs);
 TimeSetup.instants_per_grid = 1440; % Temp, RB
@@ -503,7 +503,7 @@ create_schema_ini('output',Sin_Path_Output,num_grids,instants_per_grid,SinNameEm
 %     end
 % end
 
-% for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
+% parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
 for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
     % temporary load profile
     Profile_temp = struct;
