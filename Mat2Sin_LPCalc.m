@@ -232,8 +232,8 @@ end
 %% Load static input (e.q. column names in a database)
 
 % Column names of Table OpSer, OpSerVal, ULFNodeRes und ULFBranchRes
-load('Col_Name_OpSer.mat')
-load('Col_Name_OpSerVal.mat')
+load([cd,         '\data\Static_Input\Col_Name_OpSer.mat'   ]);
+load([cd,         '\data\Static_Input\Col_Name_OpSerVal.mat']);
 NodeVector   = calcNodeOutputVector(Output_options);
 BranchVector = calcBranchOutputVector(Output_options);
 % load('Col_Name_ULFNodeResult.mat')
@@ -476,21 +476,23 @@ create_schema_ini('output',Sin_Path_Output,num_grids,instants_per_grid,SinNameEm
 %             return
 %     end
 % end
-% 
-% poolobj = gcp('nocreate');
-% delete(poolobj)
-% 
-% poolobj = gcp('nocreate');
-% if isempty(poolobj)
-%     myCluster = parcluster('local');
-%     poolsize = myCluster.NumWorkers - 1;
-%     if poolsize > num_grids
-%         poolsize = num_grids;
-%     end
-%     parpool('local',poolsize);
-% else
-%     poolsize = poolobj.NumWorkers;
-% end
+
+if Fig.Main_Win.popupmenu_ParrallelCom.Value == 1
+    poolobj = gcp('nocreate');
+    delete(poolobj)
+    
+    poolobj = gcp('nocreate');
+    if isempty(poolobj)
+        myCluster = parcluster('local');
+        poolsize = Fig.Main_Win.popupmenu_NumelCores.Value;
+        if poolsize > num_grids
+            poolsize = num_grids;
+        end
+        parpool('local',poolsize);
+    else
+        poolsize = poolobj.NumWorkers;
+    end
+end
 
 %% Adjustment of load profiles and create OpSer and OpSerVal txt
 % For parallel computing the memory must be kept low, for this reason the
@@ -504,27 +506,17 @@ create_schema_ini('output',Sin_Path_Output,num_grids,instants_per_grid,SinNameEm
 % end
 
 % parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-    % temporary load profile
-    Profile_temp = struct;
-    if k_grid~=num_grids % all grids with full number of instants
-        for i_field = 1:numel(fieldnames_DB)
-            Profile_temp.(fieldnames_DB{i_field}) = ...
-                Profile_DB.(fieldnames_DB{i_field})(((k_grid-1)*instants_per_grid+1):k_grid*instants_per_grid,:);
-        end
-    else % last grid can have a smaller number of instants
-        for i_field = 1:numel(fieldnames_DB)
-            Profile_temp.(fieldnames_DB{i_field}) = ...
-                Profile_DB.(fieldnames_DB{i_field})(((k_grid-1)*instants_per_grid+1):end,:);
-        end
+if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
+    for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
+        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input);
     end
-    % Create OpSerVal txt files
-    OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
-    create_OpSer_txt   (fieldnames_DB,Sin_Path_Input,OpSer_suffix);
-    create_OpSerVal_txt(Profile_temp, Sin_Path_Input,OpSer_suffix);
+else    % Parralel
+    parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
+        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input);
+    end
 end
 % delete Profile_DB (for parallel computing the memory must be kept low)
-clear Profile_DB Profile_temp 
+clear Profile_DB Profile_temp
 
 %% Txt2Database
 % num_grids = 1;
@@ -535,41 +527,25 @@ clear Profile_DB Profile_temp
 %             return
 %     end
 % end
+if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
+    for k_grid = 1:num_grids % over all grids
+        Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char);
+    end
+else
+    parfor k_grid = 1:num_grids % over all grids
+        Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char);
+    end
+end
 
-for k_grid = 1:num_grids % over all grids
-
-    % Create copy of Sincal file
-    SinName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-    copyfile([Sin_Path_Input,SinNameEmpty,'.sin'],[Sin_Path_Grids,SinName,'.sin']);
-    
-    % Create copy of Sincal folder
-    SinFolName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-    copyfile([Sin_Path_Input,SinNameEmpty,'_files\'],[Sin_Path_Grids,SinFolName]);   
-    % Adjust database.ini
-    delete([Sin_Path_Grids,SinFolName,'database.ini']);
-    % create new database.ini file
-    fileID = fopen([Sin_Path_Grids,SinFolName,'database.ini'],'at');
-    fprintf(fileID,'[Config]\nDisableStdDocHandling=0\n[Exclude]\n[Database]\nMODE=JET\n');
-    fprintf(fileID,strrep(['FILE=',Sin_Path_Grids,SinFolName,'database.mdb'],'\','\\'));
-    fclose(fileID);
-
-    % Read in OpSer and OpSerVal txt files into Access DB
-    DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
-    OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
-    bulk_in_DB(DB_PathNameType,OpSer_suffix,Sin_Path_Input);
-
-% end
-
-% Load flow calculation with load profiles
-
-% parfor k_grid = 1:num_grids % over all grids %1:num_grids
-
-    SinName   = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];   
-    LF_Status = Mat2Sin_StartLFProfile(SinName,Sin_Path_Grids); % Calculate load flow with load profiles
-    disp(LF_Status);
-%     if ~strcmp('Successful',LF_Status)
-%         break;
-%     end
+%% Load flow calculation with load profiles
+if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel    
+    for k_grid = 1:num_grids % over all grids %1:num_grids
+        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids);
+    end
+else
+    parfor k_grid = 1:num_grids % over all grids %1:num_grids
+        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids);
+    end
 end
 
 %% Restart parallel pool (for parallel computing), more stable
@@ -578,6 +554,7 @@ end
 % delete(poolobj)
 % parpool('local',poolsize);
 % 
+
 %% Database2Txt
 
 % % Waitbar Update
@@ -586,65 +563,33 @@ end
 %             return
 %     end
 % end
-    
-k_grid_input = 1:num_grids;
-Done_all = false(num_grids,1);
-for k = 1:num_grids % over all grids
-    k_grid = k_grid_input(k);
-    Col_Name_ULFNodeResult = load('Col_Name_ULFNodeResult.mat');
-    Col_Name_ULFNodeResult_fieldname = fieldnames(Col_Name_ULFNodeResult);
-    Col_Name_ULFNodeResult = Col_Name_ULFNodeResult.(Col_Name_ULFNodeResult_fieldname{1});
-    Col_Name_ULFBranchResult = load('Col_Name_ULFBranchResult.mat');
-    Col_Name_ULFBranchResult_fieldname = fieldnames(Col_Name_ULFBranchResult);
-    Col_Name_ULFBranchResult = Col_Name_ULFBranchResult.(Col_Name_ULFBranchResult_fieldname{1});
-    if ~Done_all(k)
-        SinName         = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-        SinFolName      = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-        DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
-        name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
-        table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
-% %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4:10,12:16,18:22,24,47]),Sin_Path,name_txt);
-%         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,31,47]),Sin_Path_Output,name_txt);
-        bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult(NodeVector),Sin_Path_Output,name_txt);
-        % Results from ULFBranchResult
-        name_txt        = ['BranchRes_',SinName,'.txt'];
-        table_Name      = 'ULFBranchResult';
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,8,14,20,41]),Sin_Path,name_txt);
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,5,6,8,11,12,14,17,18,20,41]),Sin_Path_Output,name_txt);
-        Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult(BranchVector),Sin_Path_Output,name_txt);
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult,Sin_Path,name_txt);
-    end
-end
-% poolobj = gcp('nocreate');
-% delete(poolobj)
 
-%% second try Database2Txt (to improve), not parallel
 Col_Name_ULFNodeResult = load('Col_Name_ULFNodeResult.mat');
 Col_Name_ULFNodeResult_fieldname = fieldnames(Col_Name_ULFNodeResult);
 Col_Name_ULFNodeResult = Col_Name_ULFNodeResult.(Col_Name_ULFNodeResult_fieldname{1});
 Col_Name_ULFBranchResult = load('Col_Name_ULFBranchResult.mat');
 Col_Name_ULFBranchResult_fieldname = fieldnames(Col_Name_ULFBranchResult);
 Col_Name_ULFBranchResult = Col_Name_ULFBranchResult.(Col_Name_ULFBranchResult_fieldname{1});
+
+k_grid_input = 1:num_grids;
+Done_all = false(num_grids,1);
+if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
+    for k = 1:num_grids % over all grids
+        Done_all(k) = prep_txt_output(k_grid_input,k,Done_all(k),SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+    end
+else
+    parfor k = 1:num_grids % over all grids
+        Done_all(k) = prep_txt_output(k_grid_input,k,Done_all(k),SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+    end
+end
+% poolobj = gcp('nocreate');
+% delete(poolobj)
+
+%% second try Database2Txt (to improve), not parallel
+
 for k = 1:num_grids % second try ... to improve
-    k_grid = k_grid_input(k);
     if ~Done_all(k)
-        SinName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-        SinFolName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-        DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
-        % Save load flow results as txt files
-        % Results from ULFNodeResult
-        name_txt = ['NodeRes_',SinName,'.txt'];
-        table_Name = 'ULFNodeResult';
-% %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4:10,12:16,18:22,24,47]),Sin_Path,name_txt);
-%         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,31,47]),Sin_Path_Output,name_txt);
-        bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult(NodeVector),Sin_Path_Output,name_txt);
-        % Results from ULFBranchResult
-        name_txt = ['BranchRes_',SinName,'.txt'];
-        table_Name = 'ULFBranchResult';
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,8,14,20,41]),Sin_Path,name_txt);
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,5,6,8,11,12,14,17,18,20,41]),Sin_Path_Output,name_txt);
-        Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult(BranchVector),Sin_Path_Output,name_txt);
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult,Sin_Path,name_txt);
+        Done_all(k) = prep_txt_output(k_grid_input,k,Done_all(k),SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
     end
 end
 
@@ -729,7 +674,6 @@ Output_Filename = [Output_Name,'_Simulation_Details.mat'];
 SimData_Filename = [Outputs_Path,Output_Filename];
 save(SimData_Filename,'SimDetails','-v7.3');
 
-
 %% Delete all temporary simulation files
 
 if Settings.del_sim_files
@@ -749,4 +693,76 @@ end
 disp('Simulation completed');
 status = true;
 
+end
+
+function prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input)
+% temporary load profile
+Profile_temp = struct;
+if k_grid~=num_grids % all grids with full number of instants
+    for i_field = 1:numel(fieldnames_DB)
+        Profile_temp.(fieldnames_DB{i_field}) = ...
+            Profile_DB.(fieldnames_DB{i_field})(((k_grid-1)*instants_per_grid+1):k_grid*instants_per_grid,:);
+    end
+else % last grid can have a smaller number of instants
+    for i_field = 1:numel(fieldnames_DB)
+        Profile_temp.(fieldnames_DB{i_field}) = ...
+            Profile_DB.(fieldnames_DB{i_field})(((k_grid-1)*instants_per_grid+1):end,:);
+    end
+end
+% Create OpSerVal txt files
+OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
+create_OpSer_txt   (fieldnames_DB,Sin_Path_Input,OpSer_suffix);
+create_OpSerVal_txt(Profile_temp, Sin_Path_Input,OpSer_suffix);
+end
+
+function Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char)
+% Create copy of Sincal file
+SinName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+copyfile([Sin_Path_Input,SinNameEmpty,'.sin'],[Sin_Path_Grids,SinName,'.sin']);
+
+% Create copy of Sincal folder
+SinFolName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
+copyfile([Sin_Path_Input,SinNameEmpty,'_files\'],[Sin_Path_Grids,SinFolName]);
+% Adjust database.ini
+delete([Sin_Path_Grids,SinFolName,'database.ini']);
+% create new database.ini file
+fileID = fopen([Sin_Path_Grids,SinFolName,'database.ini'],'at');
+fprintf(fileID,'[Config]\nDisableStdDocHandling=0\n[Exclude]\n[Database]\nMODE=JET\n');
+fprintf(fileID,strrep(['FILE=',Sin_Path_Grids,SinFolName,'database.mdb'],'\','\\'));
+fclose(fileID);
+
+% Read in OpSer and OpSerVal txt files into Access DB
+DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
+OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
+bulk_in_DB(DB_PathNameType,OpSer_suffix,Sin_Path_Input);
+end
+
+function StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids)
+SinName   = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+LF_Status = Mat2Sin_StartLFProfile(SinName,Sin_Path_Grids); % Calculate load flow with load profiles
+disp(LF_Status);
+%     if ~strcmp('Successful',LF_Status)
+%         break;
+%     end
+end
+
+function Done_all = prep_txt_output(k_grid_input,k,Done_all,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector)
+k_grid = k_grid_input(k);
+if ~Done_all(k)
+    SinName         = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+    SinFolName      = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
+    DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
+    name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
+    table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
+    % %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4:10,12:16,18:22,24,47]),Sin_Path,name_txt);
+    %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,31,47]),Sin_Path_Output,name_txt);
+    bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult(NodeVector),Sin_Path_Output,name_txt);
+    % Results from ULFBranchResult
+    name_txt        = ['BranchRes_',SinName,'.txt'];
+    table_Name      = 'ULFBranchResult';
+    %         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,8,14,20,41]),Sin_Path,name_txt);
+    %         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,5,6,8,11,12,14,17,18,20,41]),Sin_Path_Output,name_txt);
+    Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult(BranchVector),Sin_Path_Output,name_txt);
+    %         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult,Sin_Path,name_txt);
+end
 end
