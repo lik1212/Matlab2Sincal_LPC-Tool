@@ -1,16 +1,18 @@
-function LF_Status = Mat2Sin_StartLFProfile(Sin_Name,Sin_Path)
+function LF_Status = Mat2Sin_StartLFProfile(Sin_Name,Sin_Path,SincalVersion)
 % Mat2Sin_StartLF - Start Load-flow in Sincal
 %
 %   LF_Status = Mat2Sin_StartLF(Sin_Name,Sin_Path)
 %
-%       Sin_Name   (Required)     - String that defines the name of the
+%       Sin_Name      (Required)  - String that defines the name of the
 %                                   Sincal file
 %
-%       Sin_Path   (Optional)     - String that defines the path of the
+%       Sin_Path      (Optional)  - String that defines the path of the
 %                                   Sincal file
 %                                 - (default): 'pwd' - current folder 
 %
-%       LF_Status (Output)        - String
+%       SincalVersion (Optional)  - Double that defines the Sincal Version
+%                                   installed at your PC
+%       LF_Status     (Output)    - String
 %                                 - Info message about the Load-flow status
 %
 % RB, 2015
@@ -21,6 +23,26 @@ function LF_Status = Mat2Sin_StartLFProfile(Sin_Name,Sin_Path)
 % Set the default path if no path is given
 if nargin<2
     Sin_Path = [pwd,'\'];
+end
+
+% Check installed Sincal Version
+if nargin<3
+    max_Version_Sincal  = 14;
+    max_Version_Mat2Sin = 11;
+    VersionInstalled = false;
+    while ~VersionInstalled
+        try
+            actxserver(['Sincal.Simulation.',num2str(max_Version_Mat2Sin)]);
+            VersionInstalled = true;
+            clear ans
+        catch
+            max_Version_Mat2Sin = max_Version_Mat2Sin - 1  ;
+            max_Version_Sincal  = max_Version_Sincal  - 0.5;
+        end
+    end
+    Mat2SinVersion = max_Version_Mat2Sin;
+else
+    Mat2SinVersion = -17 + 2 * SincalVersion;
 end
 
 % Correct the path if necessary
@@ -39,8 +61,7 @@ s.PathSin = [Sin_Path,Sin_Name,'.sin'];
 % try-catch To get a message if an error occur during the Matlab connection with the DB
 try  
     % Server for the Matlab connection to Sincal
-    s.conn = actxserver('Sincal.Simulation.9');
-%     s.conn = actxserver('Sincal.Simulation.8');
+    s.conn = actxserver(['Sincal.Simulation.',num2str(Mat2SinVersion)]);
     % Connection with the Sincal Database 
     s.conn.Database(['NET;JET;', s.PathDB, ';;;Admin;;', s.PathSin, ';;;']); 
     % BatchMode defines the Save Mode, 1 - virtually DB, without saving
