@@ -4,7 +4,7 @@ function PLC_Tool_GUI
 % with Sincal. The PFC is controlled and started with the Matlab function
 % Mat2Sin_LPCalc(f)
 %
-% Author(s): P.Gassler, R. Brandalik
+% Author(s): P.Gassler, R. Brandalik ...
 
 %% Check if GUI already opened
 
