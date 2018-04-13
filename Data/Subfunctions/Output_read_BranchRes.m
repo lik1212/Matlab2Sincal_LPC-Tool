@@ -1,4 +1,4 @@
-function Output_read_BranchRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,Time_Vector,SinInfo,Output_Name,Output_options)
+function Output_read_BranchRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options)
 %% 
 %   Author(s): P. Gassler
 %              based on code from R. Brandalik
@@ -194,7 +194,7 @@ if Output_options.Unit
     SimResults_Branches_per_units = struct;
     SimResults_Branches_per_units.Branches = Branches;
     if Output_options.T_vector
-        SimResults_Branches_per_units.Time_Vector = Time_Vector;
+%         SimResults_Branches_per_units.Time_Vector = Time_Vector;
     end
     if Output_options.Sin_Info
         SimResults_Branches_per_units.Grid_Info = SinInfo;

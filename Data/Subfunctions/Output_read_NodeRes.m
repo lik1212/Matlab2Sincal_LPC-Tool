@@ -1,4 +1,4 @@
-function Output_read_NodeRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,Time_Vector,SinInfo,Output_Name,Output_options)
+function Output_read_NodeRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options)
 % function read the NodeRes .txt files (one file per Grid) and creates a .mat database 
 % with all Power Flow result
 %   Author(s): P. Gassler
@@ -101,7 +101,7 @@ if Output_options.Unit
     SimResults_Nodes_per_units = struct;
     SimResults_Nodes_per_units.Nodes = Nodes;
     if Output_options.T_vector
-        SimResults_Nodes_per_units.Time_Vector = Time_Vector;
+%         SimResults_Nodes_per_units.Time_Vector = Time_Vector;
     end
     if Output_options.Sin_Info
         SimResults_Nodes_per_units.Grid_Info = SinInfo;
