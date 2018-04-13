@@ -129,18 +129,18 @@ SinName                    = 'Wessum-Riete_Netz_170726_empty';
 
 % Default values
 TimeSetup = struct;
-TimeSetup.First_Moment       = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');
-TimeSetup.Last_Moment        = datetime('31.12.2015 23:50:00','Format','dd.MM.yyyy HH:mm:ss');
-TimeSetup.Time_Step          = 1; % Minutes
-TimeSetup.num_of_instants    = 1440;
-Inputs.TimeSetup_num_of_instants = 1440; % 1440; % Temp, RB
-TimeSetup = Setting_Time_Parameters(TimeSetup,Inputs);
-TimeSetup.instants_per_grid = 1440; % Temp, RB
-Time_Vector = TimeSetup.Time_Vector;
+% TimeSetup.First_Moment       = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');
+% TimeSetup.Last_Moment        = datetime('31.12.2015 23:50:00','Format','dd.MM.yyyy HH:mm:ss');
+% TimeSetup.Time_Step          = 1; % Minutes
+% TimeSetup.num_of_instants    = 1440;
+% Inputs.TimeSetup_num_of_instants = 1440; % 1440; % Temp, RB
+% TimeSetup = Setting_Time_Parameters(TimeSetup,Inputs);
+% TimeSetup.instants_per_grid = 1440; % Temp, RB
+% Time_Vector = TimeSetup.Time_Vector;
 % number of time instants (initial all timestemps are set)
 % num_of_instants = size(Profile_DB.(fieldnames_DB{1}),1); % any field
 % number of instants per grid (keep access database below 2GB)
-instants_per_grid = TimeSetup.instants_per_grid;
+% instants_per_grid = TimeSetup.instants_per_grid;
 
 %% Global variables definition and default value assignment
 % structure with all settings variables
@@ -329,7 +329,6 @@ switch Settings.PV_Type
         load([Settings.PV_Path,Settings.PV_DB_Name]); 
 end
 
-
 fields_names_LoP = fields(Load_Profiles);           % LoP - Load profiles
 fields_names_PvP = fields(PV___Profiles);           % PvP - PV   profiles
 
@@ -343,6 +342,7 @@ switch Settings.LP_dist_type
         writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Lo = randomDistribution(SinInfo,fields_names_LoP,'1p');
+        Settings.LP_dist_list_name = 'LoadNameOriginal_random.txt'; % TODO
         writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
     case 'mean_P'
         Scada_DB = load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);
@@ -359,6 +359,7 @@ switch Settings.PV_dist_type
         writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Pv = randomDistributionPV(SinInfo,fields_names_PvP,'1p');
+        Settings.PV_dist_list_name = 'DCInfeederNameOriginal_random.txt';   % TODO
         writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
     case 'mean_P'  
 end
@@ -366,39 +367,46 @@ end
 % Connect the load and PV profiles to one database 
 Profile_DB       = struct;                          % Profile_DB - Database with all profiles
 
-if TimeSetup.num_of_instants > size(Load_Profiles.(fields_names_LoP{1}),1)
-    disp('The number of instants to calculate is bigger then the number of intants in the load profiles!');
+% Check if all Profiles have same number of instants
+if numel(unique([structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)])) > 1
+    disp('The number of intants in the load profiles are not same!');
     status = false;
     return;
+else
+    TimeSetup.num_of_instants = unique([structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)]);
 end
-
-for k = 1:numel(fields_names_LoP)
-    if ismember(fields_names_LoP(k),LP2GL_Lo.Load_Profile)
-        Profile_DB.(['Load_',fields_names_LoP{k}]) = ...
-            Load_Profiles.(fields_names_LoP{k})(1:TimeSetup.num_of_instants,:);
+    
+for k = 1:size(LP2GL_Lo,1)
+    if ismember(             LP2GL_Lo.Load_Profile(k),fields_names_LoP)
+        Profile_DB.(['Load_',LP2GL_Lo.Load_Profile{k}]) = ...
+            Load_Profiles.(  LP2GL_Lo.Load_Profile{k})(1:TimeSetup.num_of_instants,:);
     end
 end
-for k = 1:numel(fields_names_PvP)
-    if ismember(fields_names_PvP(k),LP2GL_Pv.Load_Profile)
-        Profile_DB.(['PV___',fields_names_PvP{k}]) = ...
-            PV___Profiles.(fields_names_PvP{k})(1:TimeSetup.num_of_instants,:);
+for k = 1:size(LP2GL_Pv,1)
+    if ismember(             LP2GL_Pv.Load_Profile(k),fields_names_PvP)
+        Profile_DB.(['PV___',LP2GL_Pv.Load_Profile{k}]) = ...
+            PV___Profiles.(  LP2GL_Pv.Load_Profile{k})(1:TimeSetup.num_of_instants,:);
     end
 end
-
-% Profile_DB       = struct;                          % Profile_DB - Database with all profiles
-% fields_names_LoP = fields(Load_Profiles);           % LoP - Load profiles
-% fields_names_PvP = fields(PV___Profiles);           % PvP - PV   profiles
-% for k = 1:numel(fields_names_LoP)
-%     Profile_DB.(['Load_',fields_names_LoP{k}]) = ...
-%         Load_Profiles.(fields_names_LoP{k});
-% end
-% for k = 1:numel(fields_names_PvP)
-%     Profile_DB.(['PV___',fields_names_PvP{k}]) = ...
-%         PV___Profiles.(fields_names_PvP{k});
-% end
-
 % clear Load_Profiles PV___Profiles fields_names_LoP fields_names_PvP k
 clear Load_Profiles PV___Profiles k
+
+%% Set instanst number because Access Database has maximum of 2 GB
+
+Needed_MemorySize = 10 + 1.5 * 10^-3 * size(SinInfo.Node,1)...
+    * TimeSetup.num_of_instants; % in MB approx. In Future better!
+Max_MemorySize    = 2024; % in MB
+if Fig.Main_Win.popupmenu_NumelCores.Value * Max_MemorySize > Needed_MemorySize
+    TimeSetup.instants_per_grid = ...
+        ceil(ceil(TimeSetup.num_of_instants/(ceil(Needed_MemorySize/...
+        (Max_MemorySize * Fig.Main_Win.popupmenu_NumelCores.Value))))/...
+        Fig.Main_Win.popupmenu_NumelCores.Value);
+    instants_per_grid = TimeSetup.instants_per_grid;
+else
+    TimeSetup.instants_per_grid = ...
+        ceil(TimeSetup.num_of_instants/(ceil(Needed_MemorySize/Max_MemorySize)));
+    instants_per_grid = TimeSetup.instants_per_grid;
+end
 
 %% Link between load profile and load in Sincal grid % TODO, Comments anpassen
 
@@ -477,20 +485,27 @@ create_schema_ini('output',Sin_Path_Output,num_grids,instants_per_grid,SinNameEm
 %     end
 % end
 
-if Fig.Main_Win.popupmenu_ParrallelCom.Value == 1
-    poolobj = gcp('nocreate');
-    delete(poolobj)
-    
-    poolobj = gcp('nocreate');
-    if isempty(poolobj)
-        myCluster = parcluster('local');
-        poolsize = Fig.Main_Win.popupmenu_NumelCores.Value;
-        if poolsize > num_grids
-            poolsize = num_grids;
+if Fig.Main_Win.popupmenu_ParrallelCom.Value == 1       % If i only need one Grid, is it faster to do it with one?
+    poolobj = gcp('nocreate');      % TODO
+    delete(poolobj)                 % TODO
+    if num_grids > 1
+        poolobj = gcp('nocreate');
+        if isempty(poolobj)
+            myCluster = parcluster('local');
+            poolsize = Fig.Main_Win.popupmenu_NumelCores.Value;
+            if poolsize > num_grids
+                poolsize = num_grids;
+            end
+            parpool('local',poolsize);
+        else
+            poolsize = poolobj.NumWorkers;
         end
-        parpool('local',poolsize);
     else
-        poolsize = poolobj.NumWorkers;
+        disp('No need for parallel computing, will be faster without.');
+        Fig.Main_Win.popupmenu_ParrallelCom.Value  = 2;
+        Fig.Main_Win.popupmenu_NumelCores.  Value  = 1; 
+        Fig.Main_Win.popupmenu_NumelCores.  Enable = 'off'; 
+        drawnow;
     end
 end
 
@@ -537,14 +552,18 @@ else
     end
 end
 
+%% Check Sincal Version
+
+SincalVersion = str2double(Fig.Main_Win.edit_VerSincal.String);
+
 %% Load flow calculation with load profiles
 if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel    
     for k_grid = 1:num_grids % over all grids %1:num_grids
-        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids);
+        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion);
     end
 else
     parfor k_grid = 1:num_grids % over all grids %1:num_grids
-        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids);
+        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion);
     end
 end
 
@@ -575,11 +594,15 @@ k_grid_input = 1:num_grids;
 Done_all = false(num_grids,1);
 if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
     for k = 1:num_grids % over all grids
-        Done_all(k) = prep_txt_output(k_grid_input,k,Done_all(k),SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+        if ~Done_all(k)
+            Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+        end
     end
 else
     parfor k = 1:num_grids % over all grids
-        Done_all(k) = prep_txt_output(k_grid_input,k,Done_all(k),SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+        if ~Done_all(k)
+            Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+        end
     end
 end
 % poolobj = gcp('nocreate');
@@ -589,7 +612,7 @@ end
 
 for k = 1:num_grids % second try ... to improve
     if ~Done_all(k)
-        Done_all(k) = prep_txt_output(k_grid_input,k,Done_all(k),SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+        Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
     end
 end
 
@@ -607,17 +630,17 @@ if Settings.output_prepare
 %     parpool('local',2);
     for k = 1 : 2
         if k == 1
-            Output_read_NodeRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,Time_Vector,SinInfo,Output_Name,Output_options);
+            Output_read_NodeRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options);
         else
-            Output_read_BranchRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,Time_Vector,SinInfo,Output_Name,Output_options);
+            Output_read_BranchRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options);
         end
     end
 
-    if Output_options.T_vector
-        Output_Filename = [Output_Name,'_Time_Vector.mat'];
-        SimData_Filename = [Outputs_Path,Output_Filename];
-        save(SimData_Filename,'Time_Vector','-v7.3');
-    end
+%     if Output_options.T_vector
+%         Output_Filename = [Output_Name,'_Time_Vector.mat'];
+%         SimData_Filename = [Outputs_Path,Output_Filename];
+%         save(SimData_Filename,'Time_Vector','-v7.3');
+%     end
     if Output_options.Sin_Info
         Output_Filename = [Output_Name,'_Grid_Info.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
@@ -648,11 +671,11 @@ end
 SimDetails.Grid_Name = SinNameBasic;
 SimDetails.instants_per_grid = instants_per_grid;
 SimDetails.num_grids = num_grids;
-SimDetails.First_Moment = TimeSetup.First_Moment;
-SimDetails.Last_Moment = TimeSetup.Last_Moment;
-SimDetails.Time_Step = TimeSetup.Time_Step;
-SimDetails.num_of_instants = TimeSetup.num_of_instants;
-SimDetails.Time_Vector = Time_Vector;
+% SimDetails.First_Moment = TimeSetup.First_Moment;
+% SimDetails.Last_Moment = TimeSetup.Last_Moment;
+% SimDetails.Time_Step = TimeSetup.Time_Step;
+% SimDetails.num_of_instants = TimeSetup.num_of_instants;
+% SimDetails.Time_Vector = Time_Vector;
 SimDetails.SinInfo = SinInfo;
 SimDetails.SinNameBasic = SinNameBasic;
 SimDetails.Output_Name = Output_Name;
@@ -737,32 +760,33 @@ OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
 bulk_in_DB(DB_PathNameType,OpSer_suffix,Sin_Path_Input);
 end
 
-function StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids)
+function StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion)
 SinName   = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-LF_Status = Mat2Sin_StartLFProfile(SinName,Sin_Path_Grids); % Calculate load flow with load profiles
+disp(['Starting power flow calculation of ',SinName]);
+LF_Status = Mat2Sin_StartLFProfile(SinName,Sin_Path_Grids,SincalVersion); % Calculate load flow with load profiles
 disp(LF_Status);
 %     if ~strcmp('Successful',LF_Status)
 %         break;
 %     end
 end
 
-function Done_all = prep_txt_output(k_grid_input,k,Done_all,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector)
+function Done_this = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector)
 k_grid = k_grid_input(k);
-if ~Done_all(k)
-    SinName         = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-    SinFolName      = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-    DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
-    name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
-    table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
-    % %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4:10,12:16,18:22,24,47]),Sin_Path,name_txt);
-    %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,31,47]),Sin_Path_Output,name_txt);
-    bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult(NodeVector),Sin_Path_Output,name_txt);
-    % Results from ULFBranchResult
-    name_txt        = ['BranchRes_',SinName,'.txt'];
-    table_Name      = 'ULFBranchResult';
-    %         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,8,14,20,41]),Sin_Path,name_txt);
-    %         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,5,6,8,11,12,14,17,18,20,41]),Sin_Path_Output,name_txt);
-    Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult(BranchVector),Sin_Path_Output,name_txt);
-    %         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult,Sin_Path,name_txt);
-end
+
+SinName         = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+SinFolName      = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
+DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
+name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
+table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
+% %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4:10,12:16,18:22,24,47]),Sin_Path,name_txt);
+%         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,31,47]),Sin_Path_Output,name_txt);
+bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult(NodeVector),Sin_Path_Output,name_txt);
+% Results from ULFBranchResult
+name_txt        = ['BranchRes_',SinName,'.txt'];
+table_Name      = 'ULFBranchResult';
+%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,8,14,20,41]),Sin_Path,name_txt);
+%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,5,6,8,11,12,14,17,18,20,41]),Sin_Path_Output,name_txt);
+Done_this = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult(BranchVector),Sin_Path_Output,name_txt);
+%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult,Sin_Path,name_txt);
+
 end
