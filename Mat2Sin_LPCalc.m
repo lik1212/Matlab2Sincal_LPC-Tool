@@ -292,10 +292,10 @@ copyfile(SinNameSin,SinNameCopy);
 
 % Delete old load profiles (if they exist)
 sql_in = 'DELETE FROM OpSer;';  
-Done = AccessDelValues(sql_in, DB_Name, DB_Path_Copy, DB_Type);
+Done = Matlab2Sincal_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
 if ~Done; return; end
 sql_in = 'DELETE FROM OpSerVal;';  
-Done = AccessDelValues(sql_in, DB_Name, DB_Path_Copy, DB_Type);
+Done = Matlab2Sincal_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
 if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
@@ -444,7 +444,7 @@ end
 ColumnToUpdate = 'DayOpSer_ID';
 %delete all old values in ColumnToUpdate
 sql_in = ['UPDATE Load SET ',ColumnToUpdate, ' = NULL'];
-Mat2Sin_UpdateLoad(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 % Update Load Table
 % Table2Array for value_in
 % Table2Array for value_in
@@ -455,7 +455,7 @@ for i=1:size(LP2GL_Lo_IDs,1)
     sql_in = ['UPDATE Load SET ',ColumnToUpdate,' = ',...
         num2str(LP2GL_Lo_IDs(i,2)),' WHERE Element_ID = ',...
         num2str(LP2GL_Lo_IDs(i,1))];
-    Mat2Sin_UpdateLoad(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+    Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 end
 clear fields_names_LoP
 
@@ -475,7 +475,7 @@ end
 ColumnToUpdate = 'DayOpSer_ID';
 %delete all old values in ColumnToUpdate
 sql_in = ['UPDATE DCInfeeder SET ',ColumnToUpdate, ' = NULL'];
-Mat2Sin_UpdateDCInfeeder(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 % Update Load Table
 % Table2Array for value_in
 if istable(LP2GL_Pv_IDs)
@@ -485,9 +485,9 @@ for i=1:size(LP2GL_Pv_IDs,1)
     sql_in = ['UPDATE DCInfeeder SET ',ColumnToUpdate,' = ',...
         num2str(LP2GL_Pv_IDs(i,2)),' WHERE Element_ID = ',...
         num2str(LP2GL_Pv_IDs(i,1))];
-    Mat2Sin_UpdateDCInfeeder(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+    Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 end
-% Mat2Sin_UpdateDCInfeeder(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,LP2GL_Pv_IDs);
+% Matlab2Sincal_ExecuteSQL(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,LP2GL_Pv_IDs);
 clear fields_names_PvP
 
 %% Setup customization (TODO, more than one sql commant per function)
@@ -495,17 +495,17 @@ clear fields_names_PvP
 instants_per_grid_char = num2str(instants_per_grid);
 instants_in_LC_Duration = instants_per_grid-1;% Update CalcParameter LC_Duration to equal the number of instans per grid
 sql_in = ['UPDATE CalcParameter SET ','LC_Duration', ' = NULL'];%delete all old values in ColumnToUpdate
-Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 sql_in = ['UPDATE CalcParameter SET ','LC_Duration',' = ', num2str(instants_in_LC_Duration),' WHERE CalcParameter_ID = 1'];
-Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 sql_in = 'UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''';
-Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 sql_in = 'UPDATE CalcParameter SET LC_StartTime = 1';
-Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 sql_in = 'UPDATE CalcParameter SET LC_TimeStep = 1';
-Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 sql_in = 'UPDATE CalcParameter SET Flag_LC_Incl = 4'; % 1 - Store Results Completely, 4 - Only Marked
-Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Sincal_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
 
 % Number of necessary grids
 num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid);
@@ -800,12 +800,12 @@ OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
 % SQL-Command for reading in the OpSer txt file
 sql_in = ['INSERT INTO OpSer SELECT * ',...
     ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSer',OpSer_suffix,'.txt]'];
-Done = bulk_in_DB(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+Done = Matlab2Sincal_ExecuteSQL(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
 if ~Done; return; end
 % QL-Command for reading in the OpSerVal txt file
 sql_in = ['INSERT INTO OpSerVal SELECT * ',...
     ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSerVal',OpSer_suffix,'.txt]'];
-Done = bulk_in_DB(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+Done = Matlab2Sincal_ExecuteSQL(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
 if ~Done; return; end
 end
 
@@ -829,10 +829,10 @@ Column_str = strjoin(Col_Name_ULFNodeResult(NodeVector),', ');% Sql command (str
 % Sql command for reading from Table FROM ULFNodeResult + writing Table
 % ULFNodeResult in a .txt-file
 sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Sin_Path_Output,'].[',name_txt,'] FROM ', table_Name ];
-bulk_out_DB(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+Matlab2Sincal_ExecuteSQL(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
 name_txt        = ['BranchRes_',SinName,'.txt'];
 table_Name      = 'ULFBranchResult';        % Results from ULFBranchResult
 Column_str = strjoin(Col_Name_ULFBranchResult(BranchVector),', ');% Sql command (string) part that contains Column Names
 sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Sin_Path_Output,'].[',name_txt,'] FROM ', table_Name ];
-Done_this = bulk_out_DB(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+Done_this = Matlab2Sincal_ExecuteSQL(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
 end
