@@ -1,4 +1,4 @@
-function Done = bulk_out_DB(DB_PathNameType,Table_Name,Col_Name,Txt_Path,Txt_Name)
+function Done = bulk_out_DB(sql_in, DB_Name, DB_Path, DB_Type)
 % bulk_out_DB - Save the Col_Name columns of the Table_Name table from the
 %  DB_PathNameType Access Database in the Txt_Name txt file in the Txt_Path
 %  path
@@ -14,48 +14,41 @@ function Done = bulk_out_DB(DB_PathNameType,Table_Name,Col_Name,Txt_Path,Txt_Nam
 
 % Matlab connection with the Access DB of the Sincal model 
 
-%% Sql command (as string) for reading data from Access
+%% Input check
 
-% Sql command (string) part that contains Column Names
-Column_str = strjoin(Col_Name,', ');
-% Sql command for reading from Table FROM ULFNodeResult + writing Table
-% ULFNodeResult in a .txt-file
-sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Txt_Path,'].[',Txt_Name,'] FROM ', Table_Name ];
+if nargin < 3                   % Set the default path
+    DB_Path = [cd,'\'];
+end
+if nargin < 4                   % Set the default database typ
+    DB_Type = '.accdb';
+end
+if DB_Path(end) ~= '\'          % Correct the path if necessary
+    DB_Path = [DB_Path,'\'];
+end
 
 %% Create the Matlab connection with the Access Database
-try
-    % Create a local OLE Automation server "svr" for starting the Access process
-    srv = actxserver('ADODB.connection');
-    % Define the Provider
-    provider = 'Microsoft.ACE.OLEDB.12.0';
-    % Open the connection with the Access Database
-    srv.Open(['Provider=' provider ';Data Source=' DB_PathNameType]);
 
-    % transaction in the open DB
-    % Begin a new transaction in the open DB connection
-    invoke(srv,'BeginTrans'); 
-
-    % Get the Recordset(ADO_rs) of the Table
-    invoke(srv,'Execute',sql_command_str);
-    
-    % Save all changes
-    invoke(srv,'CommitTrans');
-    % Close the connection
-    invoke(srv,'Close');  
-    delete(srv);
-    clear srv
-%     fprintf('File %s has been created.\n',Txt_Name);
-    disp(['File ',Txt_Name,' hast been created']);
-    Done = true;
-    
-catch
-    fprintf('\nSome error occure in %s.\n',DB_PathNameType);
-%     bulk_out_DB(DB_PathNameType,Table_Name,Col_Name,Txt_Path,Txt_Name);
-    Done = false;
-    % Close the connection
-%     invoke(srv,'Close');  
-    delete(srv);
-    clear srv
+provider  = 'Microsoft.ACE.OLEDB.12.0';                                     % Define the Provider
+open_comm = ['Provider=' provider ';Data Source=' DB_Path DB_Name DB_Type]; % Sql command (as string) to open the Access Table
+Done      = false;
+max_tries = 10;
+k_try     = 1 ;
+while Done == false && k_try < max_tries
+    try
+        srv = actxserver('ADODB.connection'  ); % Create a local OLE Automation server "srv" for starting the Access process
+        invoke(srv,'Open'        , open_comm );	% Open the connection with the Access Database
+        invoke(srv,'BeginTrans'              ); % Begin a new transaction in the open DB connection
+        invoke(srv,'Execute'     , sql_in    ); % invoke the changes
+        invoke(srv,'CommitTrans'             ); % Save all changes
+        invoke(srv,'Close'                   ); % Close the Matlab connection with the Access Database
+        srv = []; %#ok                       	% Set the srv variable to Nothing
+        Done = true;
+        fprintf(['Execution try ',num2str(k_try),' in ',DB_Name,' successful.\n']);
+    catch
+        fprintf(['Execution try ',num2str(k_try),'/',num2str(max_tries),' in ',DB_Name,' was not successful.\n']);
+        if k_try == max_tries
+            fprintf(['Connection with ',DB_Name,' could not be created. Programm will stop.\n']);
+            return;
+        end
+    end
 end
-end
-

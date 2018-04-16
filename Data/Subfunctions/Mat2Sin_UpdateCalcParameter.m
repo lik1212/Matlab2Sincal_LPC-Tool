@@ -1,4 +1,4 @@
-function Mat2Sin_UpdateCalcParameter(Sin_Name,Sin_Path,ColumnToUpdate,value_in)
+function Done = Mat2Sin_UpdateCalcParameter(sql_in, DB_Name, DB_Path, DB_Type)
 % Mat2Sin_UpdateCalcParameter - Update some column in the Sincal CalcParameter Table
 %
 %   Mat2Sin_UpdateCalcParameter(Sin_Name,Sin_Path,ColumnToUpdate,value_in)
@@ -17,50 +17,41 @@ function Mat2Sin_UpdateCalcParameter(Sin_Name,Sin_Path,ColumnToUpdate,value_in)
 %   Author(s): J. Greiner
 %              R. Brandalik
 
-%% Matlab connection with the Access DB of the Sincal model 
+%% Input check
 
-% Correct the path if necessary
-if Sin_Path(end) ~= '\'
-    Sin_Path = [Sin_Path,'\'];
+if nargin < 3                   % Set the default path
+    DB_Path = [cd,'\'];
+end
+if nargin < 4                   % Set the default database typ
+    DB_Type = '.accdb';
+end
+if DB_Path(end) ~= '\'          % Correct the path if necessary
+    DB_Path = [DB_Path,'\'];
 end
 
-% Define an object for the connection with the DB
-a=struct;
-% Set the DB path:
-a.DB_Path = [Sin_Path,Sin_Name,'_files\database.mdb'];
+%% Create the Matlab connection with the Access Database
 
-% Setting of the Access COM server
-% try-catch To get a message if an error occur during the Matlab connection with the DB
-try
-    % Server for the Matlab connection to Access
-    a.conn = actxserver('ADODB.connection');
-    % Define the Provider
-    a.provider = 'Microsoft.ACE.OLEDB.12.0';
-    % Open the connection with the Access Database
-    a.conn.Open(['Provider=' a.provider ';Data Source=' a.DB_Path]);
-catch
-    % If an error occur during the Matlab connection with the DB:
-    disp('Error during the connection of Matlab with Access.');
+provider  = 'Microsoft.ACE.OLEDB.12.0';                                     % Define the Provider
+open_comm = ['Provider=' provider ';Data Source=' DB_Path DB_Name DB_Type]; % Sql command (as string) to open the Access Table
+Done      = false;
+max_tries = 10;
+k_try     = 1 ;
+while Done == false && k_try < max_tries
+    try
+        srv = actxserver('ADODB.connection'  ); % Create a local OLE Automation server "srv" for starting the Access process
+        invoke(srv,'Open'        , open_comm );	% Open the connection with the Access Database
+        invoke(srv,'BeginTrans'              ); % Begin a new transaction in the open DB connection
+        invoke(srv,'Execute'     , sql_in    ); % invoke the changes
+        invoke(srv,'CommitTrans'             ); % Save all changes
+        invoke(srv,'Close'                   ); % Close the Matlab connection with the Access Database
+        srv = []; %#ok                       	% Set the srv variable to Nothing
+        Done = true;
+        fprintf(['Execution try ',num2str(k_try),' in ',DB_Name,' successful.\n']);
+    catch
+        fprintf(['Execution try ',num2str(k_try),'/',num2str(max_tries),' in ',DB_Name,' was not successful.\n']);
+        if k_try == max_tries
+            fprintf(['Connection with ',DB_Name,' could not be created. Programm will stop.\n']);
+            return;
+        end
+    end
 end
-
-%delete all old values in ColumnToUpdate
-SQL_in = ['UPDATE CalcParameter SET ',ColumnToUpdate, ' = NULL'];
-a.conn.Execute(SQL_in); 
-
-% Update Load Table
-SQL_in = ['UPDATE CalcParameter SET ',ColumnToUpdate,' = ',...
-    num2str(value_in),' WHERE CalcParameter_ID = 1'];
-a.conn.Execute(SQL_in); 
-
-% Static settings
-SQL_in = 'UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''';
-a.conn.Execute(SQL_in); 
-SQL_in = 'UPDATE CalcParameter SET LC_StartTime = 1';
-a.conn.Execute(SQL_in); 
-SQL_in = 'UPDATE CalcParameter SET LC_TimeStep = 1';
-a.conn.Execute(SQL_in);
-SQL_in = 'UPDATE CalcParameter SET Flag_LC_Incl = 4'; % 1 - Store Results Completely, 4 - Only Marked
-a.conn.Execute(SQL_in);
-
-% Close the connection with the DB
-a.conn.Close

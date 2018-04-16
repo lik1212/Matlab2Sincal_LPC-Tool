@@ -221,5 +221,6 @@ end
 %% Close the connection with the DB
 
 a.conn.Close
+a.conn = deal([]);
 
 end

@@ -291,8 +291,12 @@ copyfile(DB_Path,DB_Path_Copy);
 copyfile(SinNameSin,SinNameCopy);
 
 % Delete old load profiles (if they exist)
-AccessDelValues(DB_Name,'OpSer'   ,DB_Path_Copy,DB_Type);
-AccessDelValues(DB_Name,'OpSerVal',DB_Path_Copy,DB_Type);
+sql_in = 'DELETE FROM OpSer;';  
+Done = AccessDelValues(sql_in, DB_Name, DB_Path_Copy, DB_Type);
+if ~Done; return; end
+sql_in = 'DELETE FROM OpSerVal;';  
+Done = AccessDelValues(sql_in, DB_Name, DB_Path_Copy, DB_Type);
+if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
 SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);            % SinInfo table
@@ -438,8 +442,21 @@ for k_Load = 1:size(LP2GL_Lo,1)
     LP2GL_Lo_IDs.Load_Profile_ID(k_Load) = LoadProfile_Info.Load_Profile_ID(strcmp(LoadProfile_Info.ProfileName,LP2GL_Lo{k_Load,2}));
 end
 ColumnToUpdate = 'DayOpSer_ID';
-Mat2Sin_UpdateLoad(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,LP2GL_Lo_IDs);
-
+%delete all old values in ColumnToUpdate
+sql_in = ['UPDATE Load SET ',ColumnToUpdate, ' = NULL'];
+Mat2Sin_UpdateLoad(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+% Update Load Table
+% Table2Array for value_in
+% Table2Array for value_in
+if istable(LP2GL_Lo_IDs)
+    LP2GL_Lo_IDs = table2array(LP2GL_Lo_IDs);
+end
+for i=1:size(LP2GL_Lo_IDs,1)
+    sql_in = ['UPDATE Load SET ',ColumnToUpdate,' = ',...
+        num2str(LP2GL_Lo_IDs(i,2)),' WHERE Element_ID = ',...
+        num2str(LP2GL_Lo_IDs(i,1))];
+    Mat2Sin_UpdateLoad(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+end
 clear fields_names_LoP
 
 %% Add PV Profiles to Sincal Database
@@ -454,18 +471,42 @@ for k_Load = 1:size(LP2GL_Pv,1)
     LP2GL_Pv_IDs.Grid_Load_ID(k_Load)    = SinInfo.DCInfeeder.Element_ID(strcmp(SinInfo.DCInfeeder.Name,LP2GL_Pv{k_Load,1}));
     LP2GL_Pv_IDs.Load_Profile_ID(k_Load) = LoadProfile_Info.Load_Profile_ID(strcmp(LoadProfile_Info.ProfileName,LP2GL_Pv{k_Load,2}));
 end
-ColumnToUpdate = 'DayOpSer_ID';
-Mat2Sin_UpdateDCInfeeder(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,LP2GL_Pv_IDs);
 
+ColumnToUpdate = 'DayOpSer_ID';
+%delete all old values in ColumnToUpdate
+sql_in = ['UPDATE DCInfeeder SET ',ColumnToUpdate, ' = NULL'];
+Mat2Sin_UpdateDCInfeeder(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+% Update Load Table
+% Table2Array for value_in
+if istable(LP2GL_Pv_IDs)
+    LP2GL_Pv_IDs = table2array(LP2GL_Pv_IDs);
+end
+for i=1:size(LP2GL_Pv_IDs,1)
+    sql_in = ['UPDATE DCInfeeder SET ',ColumnToUpdate,' = ',...
+        num2str(LP2GL_Pv_IDs(i,2)),' WHERE Element_ID = ',...
+        num2str(LP2GL_Pv_IDs(i,1))];
+    Mat2Sin_UpdateDCInfeeder(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+end
+% Mat2Sin_UpdateDCInfeeder(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,LP2GL_Pv_IDs);
 clear fields_names_PvP
 
-%% Setup customization
+%% Setup customization (TODO, more than one sql commant per function)
 
 instants_per_grid_char = num2str(instants_per_grid);
-% Update CalcParameter LC_Duration to equal the number of instans per grid
-ColumnToUpdate = 'LC_Duration';
-instants_in_LC_Duration = instants_per_grid-1;
-Mat2Sin_UpdateCalcParameter(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,instants_in_LC_Duration);
+instants_in_LC_Duration = instants_per_grid-1;% Update CalcParameter LC_Duration to equal the number of instans per grid
+sql_in = ['UPDATE CalcParameter SET ','LC_Duration', ' = NULL'];%delete all old values in ColumnToUpdate
+Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = ['UPDATE CalcParameter SET ','LC_Duration',' = ', num2str(instants_in_LC_Duration),' WHERE CalcParameter_ID = 1'];
+Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = 'UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''';
+Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = 'UPDATE CalcParameter SET LC_StartTime = 1';
+Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = 'UPDATE CalcParameter SET LC_TimeStep = 1';
+Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = 'UPDATE CalcParameter SET Flag_LC_Incl = 4'; % 1 - Store Results Completely, 4 - Only Marked
+Mat2Sin_UpdateCalcParameter(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+
 % Number of necessary grids
 num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid);
 
@@ -755,9 +796,17 @@ fprintf(fileID,strrep(['FILE=',Sin_Path_Grids,SinFolName,'database.mdb'],'\','\\
 fclose(fileID);
 
 % Read in OpSer and OpSerVal txt files into Access DB
-DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
 OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
-bulk_in_DB(DB_PathNameType,OpSer_suffix,Sin_Path_Input);
+% SQL-Command for reading in the OpSer txt file
+sql_in = ['INSERT INTO OpSer SELECT * ',...
+    ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSer',OpSer_suffix,'.txt]'];
+Done = bulk_in_DB(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+if ~Done; return; end
+% QL-Command for reading in the OpSerVal txt file
+sql_in = ['INSERT INTO OpSerVal SELECT * ',...
+    ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSerVal',OpSer_suffix,'.txt]'];
+Done = bulk_in_DB(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+if ~Done; return; end
 end
 
 function StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion)
@@ -772,21 +821,18 @@ end
 
 function Done_this = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector)
 k_grid = k_grid_input(k);
-
 SinName         = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
 SinFolName      = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-DB_PathNameType = [Sin_Path_Grids,SinFolName,DB_Name,DB_Type];
 name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
 table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
-% %         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4:10,12:16,18:22,24,47]),Sin_Path,name_txt);
-%         bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult([2,4,6,7,8,9,10,12,13,14,15,16,18,19,20,21,22,31,47]),Sin_Path_Output,name_txt);
-bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFNodeResult(NodeVector),Sin_Path_Output,name_txt);
-% Results from ULFBranchResult
+Column_str = strjoin(Col_Name_ULFNodeResult(NodeVector),', ');% Sql command (string) part that contains Column Names
+% Sql command for reading from Table FROM ULFNodeResult + writing Table
+% ULFNodeResult in a .txt-file
+sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Sin_Path_Output,'].[',name_txt,'] FROM ', table_Name ];
+bulk_out_DB(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
 name_txt        = ['BranchRes_',SinName,'.txt'];
-table_Name      = 'ULFBranchResult';
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,8,14,20,41]),Sin_Path,name_txt);
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult([2,3,5,6,8,11,12,14,17,18,20,41]),Sin_Path_Output,name_txt);
-Done_this = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult(BranchVector),Sin_Path_Output,name_txt);
-%         Done_all(k) = bulk_out_DB(DB_PathNameType,table_Name,Col_Name_ULFBranchResult,Sin_Path,name_txt);
-
+table_Name      = 'ULFBranchResult';        % Results from ULFBranchResult
+Column_str = strjoin(Col_Name_ULFBranchResult(BranchVector),', ');% Sql command (string) part that contains Column Names
+sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Sin_Path_Output,'].[',name_txt,'] FROM ', table_Name ];
+Done_this = bulk_out_DB(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
 end
