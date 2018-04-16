@@ -44,14 +44,26 @@ if ~Output_options.Raw_generated
         SimData_Filename = [Save_Path,Output_Filename];
         NodeRes_all = SimData;
         SimData = [];
-        save(SimData_Filename,'NodeRes_all','-v7.3');
+        NodeRes_all_Bytes = whos('NodeRes_all');
+        NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
+        if NodeRes_all_Bytes > 2 * 1024^3
+            save(SimData_Filename,'NodeRes_all','-v7.3');
+        else
+            save(SimData_Filename,'NodeRes_all');
+        end
         return
     % Saving RAW data in a file
     elseif Output_options.Raw
         Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
         SimData_Filename = [Save_Path,Output_Filename];
         NodeRes_all = SimData;
-        save(SimData_Filename,'NodeRes_all','-v7.3');
+        NodeRes_all_Bytes = whos('NodeRes_all');
+        NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
+        if NodeRes_all_Bytes > 2 * 1024^3
+            save(SimData_Filename,'NodeRes_all','-v7.3');
+        else
+            save(SimData_Filename,'NodeRes_all');
+        end
         clear NodeRes_all;
     end
     
@@ -504,13 +516,25 @@ end
 if Output_options.Unit
     Output_Filename = [Output_Name,'_NodeRes_per_units.mat'];
     SimData_Filename = [Save_Path,Output_Filename];
-    save(SimData_Filename,'SimResults_Nodes_per_units','-v7.3');
+    SimResults_Nodes_per_units_Bytes = whos('SimResults_Nodes_per_units');
+    SimResults_Nodes_per_units_Bytes = SimResults_Nodes_per_units_Bytes.bytes; % The variable will just be saved
+    if SimResults_Nodes_per_units_Bytes > 2 * 1024^3
+        save(SimData_Filename,'SimResults_Nodes_per_units','-v7.3');
+    else
+        save(SimData_Filename,'SimResults_Nodes_per_units');
+    end
     disp([SimData_Filename,' saved.']);
 end
 if Output_options.Node_Branch
     Output_Filename = [Output_Name,'_NodeRes_per_nodes.mat'];
     SimData_Filename = [Save_Path,Output_Filename];
-    save(SimData_Filename,'SimResults_Nodes_per_nodes','-v7.3');
+    SimResults_Nodes_per_nodes_Bytes = whos('SimResults_Nodes_per_nodes');
+    SimResults_Nodes_per_nodes_Bytes = SimResults_Nodes_per_nodes_Bytes.bytes; % The variable will just be saved
+    if SimResults_Nodes_per_nodes_Bytes > 2 * 1024^3  
+        save(SimData_Filename,'SimResults_Nodes_per_nodes','-v7.3');
+    else
+        save(SimData_Filename,'SimResults_Nodes_per_nodes');
+    end
     disp([SimData_Filename,' saved.']);
 end
 

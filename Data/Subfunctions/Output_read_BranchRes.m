@@ -42,20 +42,31 @@ if ~Output_options.Raw_generated
     SimData = sortrows(SimData,'Terminal1_ID','ascend');
     SimData = sortrows(SimData,'ResTime','ascend');
 
-    %% Saving RAW data in a file and leaving function
+    %% Saving only RAW data in a file and leaving function
     if Output_options.Raw_only
         Output_Filename = [Output_Name,'_BranchRes_raw.mat'];
         SimData_Filename = [Save_Path,Output_Filename];
         BranchRes_all = SimData;
         SimData = [];
-        save(SimData_Filename,'BranchRes_all','-v7.3');
+        BranchRes_all_Bytes = whos('BranchRes_all');
+        BranchRes_all_Bytes = BranchRes_all_Bytes.bytes; % The variable will just be saved
+        if BranchRes_all_Bytes > 2 * 1024^3
+            save(SimData_Filename,'BranchRes_all','-v7.3');
+        else
+            save(SimData_Filename,'BranchRes_all');
+        end
         return
     elseif Output_options.Raw
         Output_Filename = [Output_Name,'_BranchRes_raw.mat'];
         SimData_Filename = [Save_Path,Output_Filename];
         BranchRes_all = SimData;
-        save(SimData_Filename,'BranchRes_all','-v7.3');
-        clear BranchRes_all;
+        BranchRes_all_Bytes = whos('BranchRes_all');
+        BranchRes_all_Bytes = BranchRes_all_Bytes.bytes; % The variable will just be saved
+        if BranchRes_all_Bytes > 2 * 1024^3
+            save(SimData_Filename,'BranchRes_all','-v7.3');
+        else
+            save(SimData_Filename,'BranchRes_all');
+        end
     end
 else
     if isfield(Output_options,'Input_Filename')
@@ -173,14 +184,11 @@ SimData_ID_down.LineID = repmat(ElementID',instants_per_grid*num_grids,1);
 %         ElementID(k);
 % end
 
-
 % clear useless data to save space
 SimData_ID_up.Node1_ID = [];
 SimData_ID_up.Node2_ID = [];
 SimData_ID_down.Node1_ID = [];
 SimData_ID_down.Node2_ID = [];
-
-
 
 %% Declaration of Database for results classified per Node or per Unit
 
@@ -590,13 +598,25 @@ end
 if Output_options.Unit
     Output_Filename = [Output_Name,'_BranchRes_per_units.mat'];
     SimData_Filename = [Save_Path,Output_Filename];
-    save(SimData_Filename,'SimResults_Branches_per_units','-v7.3');
+    SimResults_Branches_per_units_Bytes = whos('SimResults_Branches_per_units');
+    SimResults_Branches_per_units_Bytes = SimResults_Branches_per_units_Bytes.bytes; % The variable will just be saved
+    if SimResults_Branches_per_units_Bytes > 2 * 1024^3
+        save(SimData_Filename,'SimResults_Branches_per_units','-v7.3');
+    else
+        save(SimData_Filename,'SimResults_Branches_per_units');        
+    end
     disp([SimData_Filename,' saved.']);
 end
 if Output_options.Node_Branch
     Output_Filename = [Output_Name,'_BranchRes_per_branches.mat'];
     SimData_Filename = [Save_Path,Output_Filename];
-    save(SimData_Filename,'SimResults_Branches_per_branches','-v7.3');
+    SimResults_Branches_per_branches_Bytes = whos('SimResults_Branches_per_units');
+    SimResults_Branches_per_branches_Bytes = SimResults_Branches_per_branches_Bytes.bytes; % The variable will just be saved    
+    if SimResults_Branches_per_branches_Bytes > 2 * 1024^3
+        save(SimData_Filename,'SimResults_Branches_per_branches','-v7.3');
+    else
+        save(SimData_Filename,'SimResults_Branches_per_branches');
+    end
     disp([SimData_Filename,' saved.']);
 end
 
