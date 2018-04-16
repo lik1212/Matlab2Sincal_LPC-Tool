@@ -21,6 +21,7 @@ addpath                  ([pwd,         '\Data\Static_Input\' ]);        	% Add 
 %% Definition of global Settings
 f = struct;
 f.Inputs = struct;
+f.Inputs.Data_Path              = [pwd,'\Data\'];
 f.Inputs.Inputs_Path            = [pwd,'\Inputs\'];
 f.Inputs.Outputs_Path           = [pwd,'\Outputs\'];
 f.Inputs.Profiles_Path_static   = [f.Inputs.Inputs_Path,'Static_Profiles\'];
