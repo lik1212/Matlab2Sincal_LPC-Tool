@@ -1,4 +1,4 @@
-function Done = AccessDelValues(sql_in, DB_Name, DB_Path, DB_Type)
+function Done = Matlab2Sincal_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type)
 % AccessDelValues - Delete all Values in Tab_Name Table from DB_Name
 %                   Database
 %
