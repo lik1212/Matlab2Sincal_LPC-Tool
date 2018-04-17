@@ -70,21 +70,23 @@ function status = Mat2Sin_LPCalc(Fig)
 %                   10. Start parallel pool (for parallel computing)
 %                   11. Load flow calculation with load profiles
 %                   12. Delete overhead
-
+%
 %   Author(s): J. Greiner
 %              R. Brandalik
 %              P. Gassler
 
 %% Default Path definition and directory preparation
 
-Inputs = Fig.Inputs;
-Settings = struct;
-Output_options = struct;
-SimDetails = struct;
+Inputs          = Fig.Inputs;
+Settings        = struct;
+Output_options  = struct;
+SimDetails      = struct;
+
 addpath                  ([cd,         '\data\Subfunctions'  ]);            % Add Subfunction path
 addpath                  ([cd,         '\data\Static_Input' ]);             % Add path for static input (e.q. column names in a database)
-Inputs_Path             = [cd,         '\Inputs\'];                         % Path for the simulation's input files 
+Inputs_Path             = [cd,         '\Inputs\'];                         % Path for the simulation's input  files 
 Outputs_Path            = [cd,         '\Outputs\'];                        % Path for the simulation's output files
+Sin_Path_Data           = [cd,          '\Data\'];                          % Path for the simulation's data   files
 Profiles_Path_static    = [Inputs_Path,'Static_Profiles\'];                 % Path for static load and PV profiles like Smart Scada
 Settings.LP_Path        = [Inputs_Path,'Load_Profiles\'];                   % Path for load profiles
 Settings.PV_Path        = [Inputs_Path,'PV_Profiles\'];                     % Path for PV profiles
@@ -119,7 +121,6 @@ Sin_Path_Grids          = [Sin_Path,   'Grids\'];                           % Pa
 
 %% Default Names definition
 
-Settings.LP_dist_list_name = 'LoadNameOriginal.txt';
 Settings.PV_dist_list_name = 'DCInfeederNameOriginal.txt';
 Settings.LP_DB_Name        = 'LP_database.mat';
 Settings.PV_DB_Name        = 'PV_database.mat';
@@ -215,29 +216,28 @@ end
 %% Delete all the simulation files at the beginning
 
 if Settings.del_sim_files_begin
-    % delete inputs Files
-    if isdir(Sin_Path_Input)
-        rmdir(Sin_Path_Input,'s');
-    end
-    % delete output Files
-    if isdir(Sin_Path_Output)
-        rmdir(Sin_Path_Output,'s');
-    end
-    % delete grids Files
-    if isdir(Sin_Path_Grids)
-        rmdir(Sin_Path_Grids,'s');
-    end
+    if isfolder(Sin_Path_Input ); rmdir(Sin_Path_Input, 's'); end           % delete input  Files
+    if isfolder(Sin_Path_Output); rmdir(Sin_Path_Output,'s'); end           % delete output Files   
+    if isfolder(Sin_Path_Grids ); rmdir(Sin_Path_Grids, 's'); end           % delete grids  Files
 end
 
 %% Load static input (e.q. column names in a database)
 
 % Column names of Table OpSer, OpSerVal, ULFNodeRes und ULFBranchRes
-load([cd,         '\data\Static_Input\Col_Name_OpSer.mat'   ]);
-load([cd,         '\data\Static_Input\Col_Name_OpSerVal.mat']);
-NodeVector   = calcNodeOutputVector(Output_options);
+load([Sin_Path_Data, 'Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          );
+load([Sin_Path_Data, 'Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       );
+% load([Sin_Path_Data, 'Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
+% load([Sin_Path_Data, 'Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
+% For some more stable in parfor: (Check why) % TODO
+Col_Name_ULFNodeResult             = load('Col_Name_ULFNodeResult.mat');
+Col_Name_ULFNodeResult_fieldname   = fieldnames(Col_Name_ULFNodeResult);
+Col_Name_ULFNodeResult             = Col_Name_ULFNodeResult.(Col_Name_ULFNodeResult_fieldname{1});
+Col_Name_ULFBranchResult           = load('Col_Name_ULFBranchResult.mat');
+Col_Name_ULFBranchResult_fieldname = fieldnames(Col_Name_ULFBranchResult);
+Col_Name_ULFBranchResult           = Col_Name_ULFBranchResult.(Col_Name_ULFBranchResult_fieldname{1});
+
+NodeVector   = calcNodeOutputVector  (Output_options);
 BranchVector = calcBranchOutputVector(Output_options);
-% load('Col_Name_ULFNodeResult.mat')
-% load('Col_Name_ULFBranchResult.mat')
 
 %% Prepare the Sincal grid
 
@@ -274,27 +274,18 @@ else
     Output_Name = SinNameBasic;
 end
 
-if ~isdir(Sin_Path_Input)
-    mkdir(Sin_Path_Input);
-end
+if ~isfolder(Sin_Path_Input); mkdir(Sin_Path_Input); end
+if ~isfolder(Sin_Path_Grids); mkdir(Sin_Path_Grids); end
+if ~isfolder(DB_Path_Copy  ); mkdir(DB_Path_Copy  ); end
 
-if ~isdir(Sin_Path_Grids)
-    mkdir(Sin_Path_Grids);
-end
-
-if ~isdir(DB_Path_Copy)
-    mkdir(DB_Path_Copy);
-end
-% copy the sincal Grid folder with database
-copyfile(DB_Path,DB_Path_Copy);
-% copy the sincal file
-copyfile(SinNameSin,SinNameCopy);
+copyfile(DB_Path   , DB_Path_Copy); % copy the sincal Grid folder with database
+copyfile(SinNameSin, SinNameCopy ); % copy the sincal file
 
 % Delete old load profiles (if they exist)
-sql_in = 'DELETE FROM OpSer;';  
-Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
-if ~Done; return; end
-sql_in = 'DELETE FROM OpSerVal;';  
+sql_in = {...
+    'DELETE FROM OpSer;'   ;...
+    'DELETE FROM OpSerVal;' ...
+    };  
 Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
 if ~Done; return; end
 
@@ -313,7 +304,8 @@ SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);            % SinInfo 
 % Loading Load Profiles Database
 switch Settings.LP_Type
     case 'SCADA'
-        load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);        % Load the load profiles
+        % load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);        % Load the load profiles
+        disp('TODO');
     case 'AAPD'
         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
         Output_Filename = [Output_Name,'_AAPD_LP_DB.mat'];
@@ -327,10 +319,11 @@ end
 
 % Loading PV Profiles Database
 switch Settings.PV_Type
-    case 'SCADA'
-        load([Profiles_Path_static,'DB23_5min_res_adjust.mat' ]);        % Load the PV profiles
     case 'DB'
-        load([Settings.PV_Path,Settings.PV_DB_Name]); 
+        load([Settings.PV_Path,Settings.PV_DB_Name],'PV___Profiles');
+    case 'SCADA'    % TODO
+        % load([Profiles_Path_static,'DB23_5min_res_adjust.mat' ]);        % Load the PV profiles
+        disp('TODO');
 end
 
 fields_names_LoP = fields(Load_Profiles);           % LoP - Load profiles
@@ -339,24 +332,21 @@ fields_names_PvP = fields(PV___Profiles);           % PvP - PV   profiles
 % Loading or Generating the distribution of the Load Profiles on the Grid Loads
 switch Settings.LP_dist_type
     case 'list'
-        LP2GL_Lo = readtable([Settings.LP_dist_Path,Settings.LP_dist_list_name],'Delimiter',';');
-        writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
-    case 'sort'
-        LP2GL_Lo = alphaDistribution(SinInfo,fields_names_LoP);
-        writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
+        LP2GL_Lo = readtable([Settings.LP_dist_Path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Lo = randomDistribution(SinInfo,fields_names_LoP,'1p');
-        Settings.LP_dist_list_name = 'LoadNameOriginal_random.txt'; % TODO
-        writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
-    case 'mean_P'
-        Scada_DB = load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);
+        LP2GL_Lo = randomDistribution(SinInfo, fields_names_LoP);
+        Settings.LP_dist_list_name = 'random.txt';
+    case 'alphab'
+        LP2GL_Lo = alphaDistribution (SinInfo, fields_names_LoP);
+        Settings.LP_dist_list_name = 'alphabetical_order.txt';
+    case 'mean_P' % TODO
+%         Scada_DB = load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);
 %         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'3p_reuse');
-        LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'1p');
-        writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
+%         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'1p');
 end
+writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
 
 % Loading or Generating the distribution of the PV Profiles on the Grid PV
-% infeeder
 switch Settings.PV_dist_type
     case 'list'
         LP2GL_Pv     = readtable([Settings.PV_dist_Path,Settings.PV_dist_list_name],'Delimiter',';');
@@ -412,6 +402,9 @@ else
     instants_per_grid = TimeSetup.instants_per_grid;
 end
 
+instants_per_grid_char = num2str(instants_per_grid);
+num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
+
 %% Link between load profile and load in Sincal grid % TODO, Comments anpassen
 
 fieldnames_DB      = fieldnames(Profile_DB);
@@ -431,93 +424,67 @@ LoadProfile_Info.Load_Profile_ID = reshape(1:num_of_profiles,num_of_profiles,1);
 %     end
 % end
 
-% IDs for the load profile to grid load connection (important for Sincal)
-LP2GL_Lo_IDs = table;
-% initial
-LP2GL_Lo_IDs.Grid_Load_ID    = zeros(size(LP2GL_Lo,1),1);
+LP2GL_Lo_IDs = table;           % IDs for the load profile to grid load connection (important for Sincal)
+LP2GL_Lo_IDs.Grid_Load_ID    = zeros(size(LP2GL_Lo,1),1);% initial
 LP2GL_Lo_IDs.Load_Profile_ID = zeros(size(LP2GL_Lo,1),1);
-% Names -> IDs
-for k_Load = 1:size(LP2GL_Lo,1)
+for k_Load = 1:size(LP2GL_Lo,1)% Names -> IDs
     LP2GL_Lo_IDs.Grid_Load_ID(k_Load)    = SinInfo.Load.Element_ID(strcmp(SinInfo.Load.Name,LP2GL_Lo{k_Load,1}));
     LP2GL_Lo_IDs.Load_Profile_ID(k_Load) = LoadProfile_Info.Load_Profile_ID(strcmp(LoadProfile_Info.ProfileName,LP2GL_Lo{k_Load,2}));
 end
-ColumnToUpdate = 'DayOpSer_ID';
-%delete all old values in ColumnToUpdate
-sql_in = ['UPDATE Load SET ',ColumnToUpdate, ' = NULL'];
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-% Update Load Table
-% Table2Array for value_in
-% Table2Array for value_in
-if istable(LP2GL_Lo_IDs)
+if istable(LP2GL_Lo_IDs)% Table2Array for value_in
     LP2GL_Lo_IDs = table2array(LP2GL_Lo_IDs);
 end
-for i=1:size(LP2GL_Lo_IDs,1)
-    sql_in = ['UPDATE Load SET ',ColumnToUpdate,' = ',...
-        num2str(LP2GL_Lo_IDs(i,2)),' WHERE Element_ID = ',...
-        num2str(LP2GL_Lo_IDs(i,1))];
-    Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = {'UPDATE Load SET DayOpSer_ID = NULL'};    %delete all old values in ColumnToUpdate
+sql_offset = size(sql_in,1);
+for k_sql = 1 : size(LP2GL_Lo_IDs,1)
+    sql_in{sql_offset + k_sql,1} = [...
+        'UPDATE Load SET DayOpSer_ID = ', num2str(LP2GL_Lo_IDs(k_sql,2)),...
+        ' WHERE Element_ID = ',           num2str(LP2GL_Lo_IDs(k_sql,1))];
 end
-clear fields_names_LoP
+Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+clear fields_names_LoP  % TODO
 
 %% Add PV Profiles to Sincal Database
 
-% IDs for the load profile to grid load connection (important for Sincal)
-LP2GL_Pv_IDs = table;
-% initial
-LP2GL_Pv_IDs.Grid_Load_ID    = zeros(size(LP2GL_Pv,1),1);
+LP2GL_Pv_IDs = table; % IDs for the load profile to grid load connection (important for Sincal)
+LP2GL_Pv_IDs.Grid_Load_ID    = zeros(size(LP2GL_Pv,1),1);   % initial
 LP2GL_Pv_IDs.Load_Profile_ID = zeros(size(LP2GL_Pv,1),1);
-% Names -> IDs
-for k_Load = 1:size(LP2GL_Pv,1)
+for k_Load = 1:size(LP2GL_Pv,1)% Names -> IDs
     LP2GL_Pv_IDs.Grid_Load_ID(k_Load)    = SinInfo.DCInfeeder.Element_ID(strcmp(SinInfo.DCInfeeder.Name,LP2GL_Pv{k_Load,1}));
     LP2GL_Pv_IDs.Load_Profile_ID(k_Load) = LoadProfile_Info.Load_Profile_ID(strcmp(LoadProfile_Info.ProfileName,LP2GL_Pv{k_Load,2}));
 end
-
-ColumnToUpdate = 'DayOpSer_ID';
-%delete all old values in ColumnToUpdate
-sql_in = ['UPDATE DCInfeeder SET ',ColumnToUpdate, ' = NULL'];
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-% Update Load Table
-% Table2Array for value_in
-if istable(LP2GL_Pv_IDs)
+if istable(LP2GL_Pv_IDs)% Table2Array for value_in
     LP2GL_Pv_IDs = table2array(LP2GL_Pv_IDs);
 end
-for i=1:size(LP2GL_Pv_IDs,1)
-    sql_in = ['UPDATE DCInfeeder SET ',ColumnToUpdate,' = ',...
-        num2str(LP2GL_Pv_IDs(i,2)),' WHERE Element_ID = ',...
-        num2str(LP2GL_Pv_IDs(i,1))];
-    Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+sql_in = {'UPDATE DCInfeeder SET DayOpSer_ID = NULL'}; %delete all old values in ColumnToUpdate
+sql_offset = size(sql_in,1);
+for k_sql = 1 : size(LP2GL_Pv_IDs,1)
+    sql_in{sql_offset + k_sql,1} = [...
+        'UPDATE DCInfeeder SET DayOpSer_ID = ', num2str(LP2GL_Pv_IDs(k_sql,2)),...
+        ' WHERE Element_ID = ',                 num2str(LP2GL_Pv_IDs(k_sql,1))];
 end
-% Matlab2Access_ExecuteSQL(SinNameEmpty,Sin_Path_Input,ColumnToUpdate,LP2GL_Pv_IDs);
-clear fields_names_PvP
+Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+clear fields_names_PvP % TODO
 
-%% Setup customization (TODO, more than one sql commant per function)
+%% Sincal Setup customization in CalcParameter
 
-instants_per_grid_char = num2str(instants_per_grid);
-instants_in_LC_Duration = instants_per_grid-1;% Update CalcParameter LC_Duration to equal the number of instans per grid
-sql_in = ['UPDATE CalcParameter SET ','LC_Duration', ' = NULL'];%delete all old values in ColumnToUpdate
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-sql_in = ['UPDATE CalcParameter SET ','LC_Duration',' = ', num2str(instants_in_LC_Duration),' WHERE CalcParameter_ID = 1'];
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-sql_in = 'UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''';
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-sql_in = 'UPDATE CalcParameter SET LC_StartTime = 1';
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-sql_in = 'UPDATE CalcParameter SET LC_TimeStep = 1';
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-sql_in = 'UPDATE CalcParameter SET Flag_LC_Incl = 4'; % 1 - Store Results Completely, 4 - Only Marked
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
-
-% Number of necessary grids
-num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid);
+instants_in_LC_Duration = instants_per_grid - 1; % Update CalcParameter LC_Duration to equal the number of instans per grid
+sql_in = {...
+    ('UPDATE CalcParameter SET LC_Duration  = NULL');...                                % delete all old values in ColumnToUpdate
+    ['UPDATE CalcParameter SET LC_Duration  = ', num2str(instants_in_LC_Duration)];...  
+    ('UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''');...
+    ('UPDATE CalcParameter SET LC_StartTime = 1'); ...
+    ('UPDATE CalcParameter SET LC_TimeStep  = 1'); ...
+    ('UPDATE CalcParameter SET Flag_LC_Incl = 4')  ... % 1 - Store Results Completely, 4 - Only Marked
+    };
+Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');
 
 %% Create schema.ini files
 
-% Input File
-create_schema_ini('input',Sin_Path_Input,num_grids,instants_per_grid);
-% Output File
-create_schema_ini('output',Sin_Path_Output,num_grids,instants_per_grid,SinNameEmpty);
+create_schema_ini('input' , Sin_Path_Input , num_grids, instants_per_grid              ); % Input  File
+create_schema_ini('output', Sin_Path_Output, num_grids, instants_per_grid, SinNameEmpty); % Output File
 
-%% Start parallel pool (for parallel computing)
+%% Start parallel pool (for parallel computing) (TODO)
 
 % % Waitbar Update
 % if waitbar_activ
@@ -532,14 +499,14 @@ if Fig.Main_Win.popupmenu_ParrallelCom.Value == 1       % If i only need one Gri
     if num_grids > 1
         poolobj = gcp('nocreate');
         if isempty(poolobj)
-            myCluster = parcluster('local');
+%             myCluster = parcluster('local');  % TODO
             poolsize = Fig.Main_Win.popupmenu_NumelCores.Value;
             if poolsize > num_grids
                 poolsize = num_grids;
             end
             parpool('local',poolsize);
         else
-            poolsize = poolobj.NumWorkers;
+%             poolsize = poolobj.NumWorkers;    % TODO
         end
     else
         disp('No need for parallel computing, will be faster without.');
@@ -624,12 +591,6 @@ end
 %     end
 % end
 
-Col_Name_ULFNodeResult = load('Col_Name_ULFNodeResult.mat');
-Col_Name_ULFNodeResult_fieldname = fieldnames(Col_Name_ULFNodeResult);
-Col_Name_ULFNodeResult = Col_Name_ULFNodeResult.(Col_Name_ULFNodeResult_fieldname{1});
-Col_Name_ULFBranchResult = load('Col_Name_ULFBranchResult.mat');
-Col_Name_ULFBranchResult_fieldname = fieldnames(Col_Name_ULFBranchResult);
-Col_Name_ULFBranchResult = Col_Name_ULFBranchResult.(Col_Name_ULFBranchResult_fieldname{1});
 
 k_grid_input = 1:num_grids;
 Done_all = false(num_grids,1);
@@ -685,7 +646,13 @@ if Settings.output_prepare
     if Output_options.Sin_Info
         Output_Filename = [Output_Name,'_Grid_Info.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
-        save(SimData_Filename,'SinInfo','-v7.3');
+        SinInfo_Bytes = whos('SinInfo');
+        SinInfo_Bytes = SinInfo_Bytes.bytes;
+        if SinInfo_Bytes > 2 * 1024^3
+            save(SimData_Filename,'SinInfo','-v7.3');
+        else
+            save(SimData_Filename,'SinInfo');
+        end
     end
 else
 %     % Waitbar Update
@@ -732,21 +699,26 @@ SimDetails.PVProfiles_Distribution_List = LP2GL_Pv;
 SimDetails.LoadProfiles_Database_Name = Settings.LP_DB_Name;
 SimDetails.PVProfiles_Database_Name = Settings.PV_DB_Name;
 SimDetails.Output_content = Output_options;
-SimDetails.SimType = 'PF';
+SimDetails.SimType = 'PF';   %#ok The variable will just be saved
 
 Output_Filename = [Output_Name,'_Simulation_Details.mat'];
 SimData_Filename = [Outputs_Path,Output_Filename];
-save(SimData_Filename,'SimDetails','-v7.3');
+
+SimDetails_Bytes = whos('SimDetails');
+SimDetails_Bytes = SimDetails_Bytes.bytes;   %#ok The variable will just be saved
+if SinInfo_Bytes > 2 * 1024^3
+    save(SimData_Filename,'SimDetails','-v7.3');
+else
+    save(SimData_Filename,'SimDetails');
+end
+
 
 %% Delete all temporary simulation files
 
-if Settings.del_sim_files
-    % delete inputs Files
-    rmdir(Sin_Path_Input,'s');
-    % delete output Files
-    rmdir(Sin_Path_Output,'s');
-    % delete grids Files
-    rmdir(Sin_Path_Grids,'s');
+if Settings.del_sim_files    
+    rmdir(Sin_Path_Input ,'s'); % delete input  Files    
+    rmdir(Sin_Path_Output,'s'); % delete output Files    
+    rmdir(Sin_Path_Grids ,'s'); % delete grids  Files
 end
 
 %% Delete Main Waitbar and finalising simulation process
