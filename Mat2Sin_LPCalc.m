@@ -335,10 +335,10 @@ switch Settings.LP_dist_type
         LP2GL_Lo = readtable([Settings.LP_dist_Path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Lo = randomDistribution(SinInfo, fields_names_LoP);
-        Settings.LP_dist_list_name = 'random.txt';
+        Settings.LP_dist_list_name = 'Load_Distribution_random.txt';
     case 'alphab'
         LP2GL_Lo = alphaDistribution (SinInfo, fields_names_LoP);
-        Settings.LP_dist_list_name = 'alphabetical_order.txt';
+        Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
     case 'mean_P' % TODO
 %         Scada_DB = load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);
 %         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'3p_reuse');
@@ -350,13 +350,12 @@ writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'D
 switch Settings.PV_dist_type
     case 'list'
         LP2GL_Pv     = readtable([Settings.PV_dist_Path,Settings.PV_dist_list_name],'Delimiter',';');
-        writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Pv = randomDistributionPV(SinInfo,fields_names_PvP);
-        Settings.PV_dist_list_name = 'DCInfeederNameOriginal_random.txt';   % TODO
-        writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
+        Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
     case 'mean_P'  
 end
+writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
 
 % Connect the load and PV profiles to one database 
 Profile_DB       = struct;                          % Profile_DB - Database with all profiles
@@ -401,7 +400,9 @@ else
         ceil(TimeSetup.num_of_instants/(ceil(Needed_MemorySize/Max_MemorySize)));
     instants_per_grid = TimeSetup.instants_per_grid;
 end
-
+if instants_per_grid > 365 * 24
+    instants_per_grid = 365 * 24;
+end
 instants_per_grid_char = num2str(instants_per_grid);
 num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
 
