@@ -1,4 +1,4 @@
-function Dist_List = randomDistributionPV(SinInfo,Profiles_Names,method)
+function Dist_List = randomDistributionPV(SinInfo,Profiles_Names)
 %
 %
 %

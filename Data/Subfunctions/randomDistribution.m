@@ -1,4 +1,4 @@
-function Dist_List = randomDistribution(SinInfo,Profiles_Names,type)
+function Dist_List = randomDistribution(SinInfo,Profiles_Names)
 %
 %
 %
