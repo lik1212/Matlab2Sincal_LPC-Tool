@@ -11,7 +11,24 @@ if ~Output_options.Raw_generated
         NodeRes_Name = [Sin_Path_Output,'NodeRes_',SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'.txt'];
         if k_grid == 1
             k_SimData = readtable(NodeRes_Name);
+            Node_all      = SinInfo.Node.Node_ID;
+            Node_occur    = unique(k_SimData.Node_ID);
+            Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
+            Missing_Nodes = setdiff(Node_all,Node_occur);
+            NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
+            NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
             VarNames   = k_SimData.Properties.VariableNames;
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = NaN_Steps;                    
+            NaN_Table.Node_ID = repmat(Node_occur,numel(Missing_Steps),1);                        
+            k_SimData     = [k_SimData; NaN_Table];                       
+            NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
+            NaN_Table.Properties.VariableNames = VarNames;                       
+            NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';          
+            NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
+            k_SimData     = [k_SimData; NaN_Table];
+            k_SimData = sortrows(k_SimData,'Node_ID','ascend');
+            k_SimData = sortrows(k_SimData,'ResTime','ascend');
             num_elements = size(k_SimData,1);
             SimData   = array2table(zeros(...
                 num_elements*num_grids,...
@@ -24,6 +41,24 @@ if ~Output_options.Raw_generated
                 :) = k_SimData;
         else
             k_SimData         = readtable(NodeRes_Name);
+            Node_all      = SinInfo.Node.Node_ID;
+            Node_occur     = unique(k_SimData.Node_ID);
+            Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
+            Missing_Nodes = setdiff(Node_all,Node_occur);
+            NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
+            NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
+            VarNames   = k_SimData.Properties.VariableNames;
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = NaN_Steps;
+            NaN_Table.Node_ID = repmat(unique(k_SimData.Node_ID),numel(Missing_Steps),1);
+            k_SimData     = [k_SimData; NaN_Table];
+            NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';
+            NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
+            k_SimData     = [k_SimData; NaN_Table];
+            k_SimData = sortrows(k_SimData,'Node_ID','ascend');
+            k_SimData = sortrows(k_SimData,'ResTime','ascend');
             % ResTime auf Instanz anpassen
             k_SimData.ResTime = (k_grid-1)*instants_per_grid + (k_SimData.ResTime);
             SimData(...

@@ -10,9 +10,35 @@ if ~Output_options.Raw_generated
         BranchRes_Name = [Sin_Path_Output,'BranchRes_',SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'.txt'];
         if k_grid == 1
             k_SimData = readtable(BranchRes_Name);
-            k_SimData(...
-                isnan(k_SimData.Terminal2_ID),:) = [];
+            k_SimData(isnan(k_SimData.Terminal2_ID),:) = [];        % One-Terminal Elements are not of interest (such as loads)
+            Branch_all = [...
+                SinInfo.TwoWindingTransformer.Terminal1_ID, SinInfo.TwoWindingTransformer.Terminal2_ID; ...
+                SinInfo.Line.                 Terminal1_ID, SinInfo.Line.                 Terminal2_ID];
+            Branch_occur = unique([k_SimData.Terminal1_ID,k_SimData.Terminal2_ID],'rows');
+            [~, unique_sum] = unique(sum(Branch_occur,2));   % No natural couple of numbers with the same sum and product
+            Branch_occur = Branch_occur(unique_sum,:);
+            [~, unique_prod] = unique(prod(Branch_occur,2));
+            Branch_occur = Branch_occur(unique_prod,:);
+            Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
+            Missing_Branchs = setdiff(Branch_all,Branch_occur,'rows');
+            NaN_Steps     = repelem(Missing_Steps',size(Branch_occur,1)*2,1);
+            NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
             VarNames   = k_SimData.Properties.VariableNames;
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = NaN_Steps;
+            Branch_occur_set = repmat([Branch_occur;fliplr(Branch_occur)],numel(Missing_Steps),1);
+            NaN_Table.Terminal1_ID = Branch_occur_set(:,1);
+            NaN_Table.Terminal2_ID = Branch_occur_set(:,2);
+            k_SimData     = [k_SimData; NaN_Table];
+            NaN_Table     = array2table(NaN(size(Missing_Branchs,1)* 2 * instants_per_grid,size(k_SimData,2)));
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = repmat(1:instants_per_grid,1,size(Missing_Branchs,1)* 2)';
+            Missing_Branchs_set = [Missing_Branchs;fliplr(Missing_Branchs)];
+            NaN_Table.Terminal1_ID = repelem(Missing_Branchs_set(:,1),instants_per_grid,1);
+            NaN_Table.Terminal2_ID = repelem(Missing_Branchs_set(:,2),instants_per_grid,1);
+            k_SimData     = [k_SimData; NaN_Table];
+            k_SimData = sortrows(k_SimData,'Terminal1_ID','ascend');
+            k_SimData = sortrows(k_SimData,'ResTime','ascend');
             num_elements = size(k_SimData,1);
             SimData   = array2table(zeros(...
                 num_elements*num_grids,...
@@ -24,9 +50,36 @@ if ~Output_options.Raw_generated
                 k_grid * num_elements,...
                 :) = k_SimData;
         else
-            k_SimData         = readtable(BranchRes_Name);
-            k_SimData(...
-                isnan(k_SimData.Terminal2_ID),:) = [];
+            k_SimData = readtable(BranchRes_Name);
+            k_SimData(isnan(k_SimData.Terminal2_ID),:) = [];        % One-Terminal Elements are not of interest (such as loads)
+            Branch_all = [...
+                SinInfo.TwoWindingTransformer.Terminal1_ID, SinInfo.TwoWindingTransformer.Terminal2_ID; ...
+                SinInfo.Line.                 Terminal1_ID, SinInfo.Line.                 Terminal2_ID];
+            Branch_occur = unique([k_SimData.Terminal1_ID,k_SimData.Terminal2_ID],'rows');
+            [~, unique_sum] = unique(sum(Branch_occur,2));   % No natural couple of numbers with the same sum and product
+            Branch_occur = Branch_occur(unique_sum,:);
+            [~, unique_prod] = unique(prod(Branch_occur,2));
+            Branch_occur = Branch_occur(unique_prod,:);
+            Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
+            Missing_Branchs = setdiff(Branch_all,Branch_occur,'rows');
+            NaN_Steps     = repelem(Missing_Steps',size(Branch_occur,1)*2,1);
+            NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
+            VarNames   = k_SimData.Properties.VariableNames;
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = NaN_Steps;
+            Branch_occur_set = repmat([Branch_occur;fliplr(Branch_occur)],numel(Missing_Steps),1);
+            NaN_Table.Terminal1_ID = Branch_occur_set(:,1);
+            NaN_Table.Terminal2_ID = Branch_occur_set(:,2);
+            k_SimData     = [k_SimData; NaN_Table];
+            NaN_Table     = array2table(NaN(size(Missing_Branchs,1)* 2 * instants_per_grid,size(k_SimData,2)));
+            NaN_Table.Properties.VariableNames = VarNames;
+            NaN_Table.ResTime = repmat(1:instants_per_grid,1,size(Missing_Branchs,1)* 2)';
+            Missing_Branchs_set = [Missing_Branchs;fliplr(Missing_Branchs)];
+            NaN_Table.Terminal1_ID = repelem(Missing_Branchs_set(:,1),instants_per_grid,1);
+            NaN_Table.Terminal2_ID = repelem(Missing_Branchs_set(:,2),instants_per_grid,1);
+            k_SimData     = [k_SimData; NaN_Table];
+            k_SimData = sortrows(k_SimData,'Terminal1_ID','ascend');
+            k_SimData = sortrows(k_SimData,'ResTime','ascend');
             % ResTime auf Instanz anpassen
             k_SimData.ResTime = (k_grid-1)*instants_per_grid + (k_SimData.ResTime);
             SimData(...
@@ -34,7 +87,7 @@ if ~Output_options.Raw_generated
                 k_grid * num_elements,...
                 :) = k_SimData;
         end
-    %     fprintf('Das %d. von %d BranchRes Files ist eingelesen worden.\n',k_grid,num_grids);
+        %     fprintf('Das %d. von %d BranchRes Files ist eingelesen worden.\n',k_grid,num_grids);
         disp([BranchRes_Name,' loaded.']);
     end
     clear k_SimData
