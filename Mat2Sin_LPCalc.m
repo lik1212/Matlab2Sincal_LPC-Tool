@@ -103,7 +103,7 @@ Sin_Path_Grids          = [Sin_Path,   'Grids\'];                           % Pa
 % active or desactive waitbar for debugging
 % waitbar_activ = true;
 % if waitbar_activ
-%     main_waitbar = waitbar(0,'Main progress','Name','PLC Tool main progress','CreateCancelBtn',...
+%     main_waitbar = waitbar(0,'Main progress','Name','LPC Tool main progress','CreateCancelBtn',...
 %                 'setappdata(gcbf,''canceling'',1)');
 %     setappdata(main_waitbar,'canceling',0);
 %     main_progress = 0;
@@ -352,7 +352,7 @@ switch Settings.PV_dist_type
         LP2GL_Pv     = readtable([Settings.PV_dist_Path,Settings.PV_dist_list_name],'Delimiter',';');
         writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Pv = randomDistributionPV(SinInfo,fields_names_PvP,'1p');
+        LP2GL_Pv = randomDistributionPV(SinInfo,fields_names_PvP);
         Settings.PV_dist_list_name = 'DCInfeederNameOriginal_random.txt';   % TODO
         writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
     case 'mean_P'  

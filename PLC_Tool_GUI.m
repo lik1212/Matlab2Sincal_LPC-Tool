@@ -1,4 +1,4 @@
-function PLC_Tool_GUI
+function LPC_Tool_GUI
 % LPC_TOOL_GUI function opens a graphical user interface. With this GUI the
 % user can set up all nessesary parameters for a Power Flow calculation
 % with Sincal. The PFC is controlled and started with the Matlab function
@@ -8,10 +8,10 @@ function PLC_Tool_GUI
 
 %% Check if GUI already opened
 
-if ishandle(findobj('type','figure','Tag','PLC_Tool'))
-%     figure(findobj('type','figure','Tag','PLC_Tool')) % TODO
+if ishandle(findobj('type','figure','Tag','LPC_Tool'))
+%     figure(findobj('type','figure','Tag','LPC_Tool')) % TODO
 %     return                                            % TODO
-    close(figure(findobj('type','figure','Tag','PLC_Tool')))
+    close(figure(findobj('type','figure','Tag','LPC_Tool')))
 end
 
 %% Add subfunctions and static data path
@@ -72,9 +72,9 @@ Fontsz = [...
 
 %% Definition of Main Window
 f.Main_Win.figure = ...
-    figure( 'Name',             'PLC Tool'...
+    figure( 'Name',             'LPC Tool'...
            ,'NumberTitle',      'off'...
-           ,'Tag',              'PLC_Tool'...
+           ,'Tag',              'LPC_Tool'...
            ,'Toolbar',          'none'...
            ,'MenuBar',          'none'...
            ,'Visible',          'on'...             % TODO
@@ -1334,7 +1334,7 @@ end
 %% Callback Generate_Output
 % Open new GUI for defining the output files from the power flow results
 function Generate_Output(~,~,f)
-PLC_Tool_GUI_Output(f);
+LPC_Tool_GUI_Output(f);
 % if f.Main_Win.checkbox_output_raw_only.Value == 1
 %     
 % elseif f.Main_Win.checkbox_output_raw_only.Value == 0
