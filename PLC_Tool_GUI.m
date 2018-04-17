@@ -25,19 +25,13 @@ f.Inputs.Data_Path              = [pwd,'\Data\'];
 f.Inputs.Inputs_Path            = [pwd,'\Inputs\'];
 f.Inputs.Outputs_Path           = [pwd,'\Outputs\'];
 f.Inputs.Profiles_Path_static   = [f.Inputs.Inputs_Path,'Static_Profiles\'];
-f.Inputs.LP_Path                = [f.Inputs.Inputs_Path,'Load_Profiles\'];    
-f.Inputs.PV_Path                = [f.Inputs.Inputs_Path,'PV_Profiles\'];  
+f.Inputs.LP_DB_Path            	= [f.Inputs.Inputs_Path,'Load_Profiles\'];    
+f.Inputs.PV_DB_Path            	= [f.Inputs.Inputs_Path,'PV_Profiles\'];  
 f.Inputs.LP_dist_path           = [f.Inputs.Inputs_Path,'Profiles_Distribution\']; 
 f.Inputs.PV_dist_path           = [f.Inputs.Inputs_Path,'Profiles_Distribution\'];
 f.Inputs.Grid_Path              = [f.Inputs.Inputs_Path,'Grids\']; 
 % f.Inputs.Grid_Path = 'Z:\Gassler\7_Hiwi\Grids';
-f.Inputs.Grid_Name              = 'Wessum-Riete_Netz_170726_empty';
-f.Inputs.LP_Type                = 'SCADA';
-f.Inputs.PV_Type                = 'SCADA';
-f.Inputs.LP_dist_type           = 'list';
-f.Inputs.PV_dist_type           = 'list';
-f.Inputs.LP_dist_list_name      = 'LoadNameOriginal.txt';
-f.Inputs.PV_dist_list_name      = 'DCInfeederNameOriginal.txt';
+% f.Inputs.PV_dist_list_name      = 'DCInfeederNameOriginal.txt';
 % f.Inputs.TimeSetup_First_Moment = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');
 % f.Inputs.TimeSetup_Last_Moment  = datetime('31.12.2015 23:50:00','Format','dd.MM.yyyy HH:mm:ss');
 % f.Inputs.TimeSetup_First_Moment_PF = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');          
@@ -96,7 +90,7 @@ f.Main_Win.text_Title = ...
     'Units',            'normalized',...
     'Position',         [0.3 0.93 0.4 0.05],...
     'Backgroundcolor',  f.Main_Win.figure.Color,...
-    'String',           'PLC Tool',...
+    'String',           'LPC Tool',...
     'FontUnits',        'normalized',...
     'FontSize',         Fontsz(6)...
     );
@@ -209,24 +203,12 @@ f.Main_Win.radiobutton_input_LP_LZR_Tool = ...
     'FontSize',     12....
     );
 
-f.Main_Win.radiobutton_input_LP_scada = ...
-    uicontrol(f.Main_Win.uibuttongroup_input_LP_type,...
-    'style',        'radiobutton',...
-    'Units',        'normalized',...
-    'Backgroundcolor',  f.Main_Win.figure.Color,...
-    'Position',     [0.42 0.7 0.2 0.2],...
-    'String',       'Scada',...
-    'Enable',       'off',...    
-    'FontUnits',    'pixels',...
-    'FontSize',     12....
-    );
-
 f.Main_Win.radiobutton_input_LP_AAPD = ...
     uicontrol(f.Main_Win.uibuttongroup_input_LP_type,...
     'style',        'radiobutton',...
     'Units',        'normalized',...
     'Backgroundcolor',  f.Main_Win.figure.Color,...
-    'Position',     [0.62 0.7 0.2 0.2],...
+    'Position',     [0.42 0.7 0.2 0.2],...
     'String',       'AAPD',...
     'Enable',       'off',...
     'FontUnits',    'pixels',...
@@ -251,7 +233,7 @@ f.Main_Win.edit_DB_LP_path = ...
     'style',            'edit',...
     'Units',            'normalized',...
     'Position',         [0.32 0.1 0.66 0.35],...
-    'String',           [f.Inputs.LP_Path,'IEEE_Lo_Profiles.mat'],...
+    'String',           [f.Inputs.LP_DB_Path,'IEEE_Lo_Profiles.mat'],...
     'Value',            1,...
     'BackgroundColor',  [1 1 1],...
     'FontUnits',        'pixels',...
@@ -311,8 +293,8 @@ f.Main_Win.radiobutton_input_dist_LP_sort = ...
     'Units',        'normalized',...
     'Backgroundcolor',  f.Main_Win.figure.Color,...
     'Position',     [0.62 0.7 0.3 0.2],...
-    'String',       'Sorted',...
-    'Enable',       'off',...    
+    'String',       'Alphabetic',...
+    'Enable',       'on',...                % TODO
     'FontUnits',    'pixels',...
     'FontSize',     12....
     );
@@ -403,18 +385,6 @@ f.Main_Win.radiobutton_input_PV_LZR_Tool = ...
     'FontSize',     12....
     );
 
-f.Main_Win.radiobutton_input_PV_scada = ...
-    uicontrol(f.Main_Win.uibuttongroup_input_PV_type,...
-    'style',        'radiobutton',...
-    'Units',        'normalized',...
-    'Backgroundcolor',  f.Main_Win.figure.Color,...
-    'Position',     [0.42 0.7 0.3 0.2],...
-    'String',       'Scada',...
-    'Enable',       'off',...    
-    'FontUnits',    'pixels',...
-    'FontSize',     12....
-    );
-
 f.Main_Win.pushbutton_DB_PV_path = ...                                      % TODO: No function yet!
     uicontrol(f.Main_Win.uibuttongroup_input_PV_type,...
     'style',            'pushbutton',...
@@ -433,7 +403,7 @@ f.Main_Win.edit_DB_PV_path = ...
     'style',            'edit',...
     'Units',            'normalized',...
     'Position',         [0.32 0.1 0.66 0.35],...
-    'String',           [f.Inputs.PV_Path,'IEEE_PV_Profiles.mat'],...
+    'String',           [f.Inputs.PV_DB_Path, 'IEEE_PV_Profiles.mat'],...
     'Enable',           'on',...
     'Value',            1,...
     'BackgroundColor',  [1 1 1],...
@@ -1030,7 +1000,6 @@ f.Main_Win.figure.Visible = 'on';
 set(f.Main_Win.pushbutton_grid_path,                'Callback',{@SelectGridPath,f});
 set(f.Main_Win.popupmenu_grid_selection,            'Callback',{@SelectGrid,f});
 %Callbacks for Load Profil type and database selection
-set(f.Main_Win.radiobutton_input_LP_scada,          'Callback',{@SelectLP_type,f});
 set(f.Main_Win.radiobutton_input_LP_AAPD,           'Callback',{@SelectLP_type,f});
 set(f.Main_Win.radiobutton_input_LP_LZR_Tool,       'Callback',{@SelectLP_type,f});
 set(f.Main_Win.radiobutton_input_LP_DB,             'Callback',{@SelectLP_type,f});
@@ -1042,7 +1011,6 @@ set(f.Main_Win.radiobutton_input_dist_LP_mean,      'Callback',{@SelectLP_dist_t
 set(f.Main_Win.radiobutton_input_dist_LP_random,    'Callback',{@SelectLP_dist_type,f});
 set(f.Main_Win.radiobutton_input_dist_LP_manual,    'Callback',{@SelectLP_dist_type,f});
 % Callbacks for PV Profile type and database selecetion
-set(f.Main_Win.radiobutton_input_PV_scada,          'Callback',{@SelectPV_type,f});
 set(f.Main_Win.radiobutton_input_PV_LZR_Tool,       'Callback',{@SelectPV_type,f});
 set(f.Main_Win.radiobutton_input_PV_DB,             'Callback',{@SelectPV_type,f});
 set(f.Main_Win.pushbutton_DB_PV_path,               'Callback',{@SelectPV_DB,f});
@@ -1242,25 +1210,22 @@ end
 %% Callback SelectLP_type
 % Only if the radiobutton "Database" is clicked allow changing the LP type file
 function SelectLP_type(~,~,f)
-if f.Main_Win.radiobutton_input_LP_scada.Value == 1
-    f.Main_Win.pushbutton_DB_LP_path.Enable     = 'off';
-    f.Main_Win.edit_DB_LP_path.Enable           = 'off';
+if f.Main_Win.radiobutton_input_LP_DB.Value == 1
+    f.Main_Win.pushbutton_DB_LP_path.Enable     = 'on';
+    f.Main_Win.edit_DB_LP_path.Enable           = 'on';
 elseif f.Main_Win.radiobutton_input_LP_AAPD.Value == 1
     f.Main_Win.pushbutton_DB_LP_path.Enable     = 'off';
     f.Main_Win.edit_DB_LP_path.Enable           = 'off';
 elseif f.Main_Win.radiobutton_input_LP_LZR_Tool.Value == 1
     f.Main_Win.pushbutton_DB_LP_path.Enable     = 'off';
     f.Main_Win.edit_DB_LP_path.Enable           = 'off';
-elseif f.Main_Win.radiobutton_input_LP_DB.Value == 1
-    f.Main_Win.pushbutton_DB_LP_path.Enable     = 'on';
-    f.Main_Win.edit_DB_LP_path.Enable           = 'on';
 end
 end
 
 %% Callback SelectLP_DB
 % Change the LP type file
 function SelectLP_DB(~,~,f)
-[filename,path,~] = uigetfile('*.mat','Select load profiles database',f.Inputs.LP_Path);
+[filename,path,~] = uigetfile('*.mat','Select load profiles database',f.Inputs.LP_DB_Path);
     if filename ~= 0
         f.Main_Win.edit_DB_LP_path.String = [path,filename];
     end
@@ -1282,35 +1247,31 @@ end
 % Change the LP distribution file
 function SelectLP_dist_list(trigger_h,~,f)
 if trigger_h == f.Main_Win.pushbutton_dist_list_LP_path
-    [filename,path,~] = uigetfile('*.txt','Select Load distribution list',[f.Inputs.LP_dist_path,...
-        f.Inputs.LP_dist_list_name]);
+    [filename, path, ~] = uigetfile('*.txt','Select Load distribution list',f.Inputs.LP_dist_path);
     if filename ~= 0
-        f.Main_Win.edit_dist_list_LP_path.String = [path,filename];
+        f.Main_Win.edit_dist_list_LP_path.String = [path, filename];
+    else
+        fprintf('No Load Profile distribution list was chosen.\n');
     end
-elseif trigger_h == f.Main_Win.edit_dist_list_LP_path
-%     [path,name,ext] = fileparts(f.Main_Win.edit_dist_list_LP_path.String);
 end
 end
 
 %% Callback SelectPV_type
 % Only if the radiobutton "Database" is clicked allow changing the PV type file
 function SelectPV_type(~,~,f)
-if f.Main_Win.radiobutton_input_PV_scada.Value == 1
-    f.Main_Win.pushbutton_DB_PV_path.Enable     = 'off';
-    f.Main_Win.edit_DB_PV_path.Enable           = 'off';
+if f.Main_Win.radiobutton_input_PV_DB.Value == 1
+    f.Main_Win.pushbutton_DB_PV_path.Enable     = 'on';
+    f.Main_Win.edit_DB_PV_path.Enable           = 'on';
 elseif f.Main_Win.radiobutton_input_PV_LZR_Tool.Value == 1
     f.Main_Win.pushbutton_DB_PV_path.Enable     = 'off';
     f.Main_Win.edit_DB_PV_path.Enable           = 'off';
-elseif f.Main_Win.radiobutton_input_PV_DB.Value == 1
-    f.Main_Win.pushbutton_DB_PV_path.Enable     = 'on';
-    f.Main_Win.edit_DB_PV_path.Enable           = 'on';
 end
 end
 
 %% Callback SelectPV_DB
 % Change the PV type file
 function SelectPV_DB(~,~,f)
-[filename,path,~] = uigetfile('*.mat','Select PV profiles database',f.Inputs.PV_Path);
+[filename,path,~] = uigetfile('*.mat','Select PV profiles database', f.Inputs.PV_DB_Path);
     if filename ~= 0
         f.Main_Win.edit_DB_PV_path.String = [path,filename];
     end
@@ -1404,120 +1365,93 @@ end
 %% Callback Start_Simulation
 % Start the simulation
 function Start_Simulation(~,~,f)
-%% Set all parameters for simulation
+% Set all parameters for simulation
 f.Inputs.Grid_Path = f.Main_Win.text_grid_path.String;
 f.Inputs.Grid_Name = f.Main_Win.popupmenu_grid_selection.String{f.Main_Win.popupmenu_grid_selection.Value};
 
-%% Set output options
-f.Inputs.Output_option_preparation      = logical(f.Main_Win.checkbox_output_active.Value);
-f.Inputs.Output_option_raw              = logical(f.Main_Win.checkbox_output_raw.Value);
-f.Inputs.Output_option_raw_only         = logical(f.Main_Win.checkbox_output_raw_only.Value);
-f.Inputs.Output_option_del_temp_files   = logical(f.Main_Win.checkbox_output_data_selection_delete_temp_files.Value);
-f.Inputs.Output_option_per_node_branch  = logical(f.Main_Win.checkbox_output_data_selection_per_node_branch.Value);
-f.Inputs.Output_option_per_unit         = logical(f.Main_Win.checkbox_output_data_selection_per_unit.Value);
-f.Inputs.Output_option_Sin_Info         = logical(f.Main_Win.checkbox_output_data_selection_Sin_Info.Value);
-f.Inputs.Output_option_T_vector         = logical(f.Main_Win.checkbox_output_data_selection_T_Vector.Value);
-f.Inputs.Output_option_U                = logical(f.Main_Win.checkbox_output_data_selection_U.Value);
-f.Inputs.Output_option_P                = logical(f.Main_Win.checkbox_output_data_selection_P.Value);
-f.Inputs.Output_option_Q                = logical(f.Main_Win.checkbox_output_data_selection_Q.Value);
-f.Inputs.Output_option_S                = logical(f.Main_Win.checkbox_output_data_selection_S.Value);
-f.Inputs.Output_option_phi              = logical(f.Main_Win.checkbox_output_data_selection_Phi.Value);
-f.Inputs.Output_option_I                = logical(f.Main_Win.checkbox_output_data_selection_I.Value);
-f.Inputs.Output_option_P_flow           = logical(f.Main_Win.checkbox_output_data_selection_P_flow.Value);
-f.Inputs.Output_option_Q_flow           = logical(f.Main_Win.checkbox_output_data_selection_Q_flow.Value);
-f.Inputs.Output_option_S_flow           = logical(f.Main_Win.checkbox_output_data_selection_S_flow.Value);
+% Set output options
+f.Inputs.Output_option_preparation      = logical(f.Main_Win.checkbox_output_active.Value                           );
+f.Inputs.Output_option_raw              = logical(f.Main_Win.checkbox_output_raw.Value                              );
+f.Inputs.Output_option_raw_only         = logical(f.Main_Win.checkbox_output_raw_only.Value                         );
+f.Inputs.Output_option_del_temp_files   = logical(f.Main_Win.checkbox_output_data_selection_delete_temp_files.Value );
+f.Inputs.Output_option_per_node_branch  = logical(f.Main_Win.checkbox_output_data_selection_per_node_branch.Value   );
+f.Inputs.Output_option_per_unit         = logical(f.Main_Win.checkbox_output_data_selection_per_unit.Value          );
+f.Inputs.Output_option_Sin_Info         = logical(f.Main_Win.checkbox_output_data_selection_Sin_Info.Value          );
+f.Inputs.Output_option_T_vector         = logical(f.Main_Win.checkbox_output_data_selection_T_Vector.Value          );
+f.Inputs.Output_option_U                = logical(f.Main_Win.checkbox_output_data_selection_U.Value                 );
+f.Inputs.Output_option_P                = logical(f.Main_Win.checkbox_output_data_selection_P.Value                 );
+f.Inputs.Output_option_Q                = logical(f.Main_Win.checkbox_output_data_selection_Q.Value                 );
+f.Inputs.Output_option_S                = logical(f.Main_Win.checkbox_output_data_selection_S.Value                 );
+f.Inputs.Output_option_phi              = logical(f.Main_Win.checkbox_output_data_selection_Phi.Value               );
+f.Inputs.Output_option_I                = logical(f.Main_Win.checkbox_output_data_selection_I.Value                 );
+f.Inputs.Output_option_P_flow           = logical(f.Main_Win.checkbox_output_data_selection_P_flow.Value            );
+f.Inputs.Output_option_Q_flow           = logical(f.Main_Win.checkbox_output_data_selection_Q_flow.Value            );
+f.Inputs.Output_option_S_flow           = logical(f.Main_Win.checkbox_output_data_selection_S_flow.Value            );
 
-%% Set load profiles type
-if f.Main_Win.radiobutton_input_LP_scada.Value        == 1
-    f.Inputs.LP_Type    = 'SCADA';
-    f.Inputs.LP_DB_Name = 'DB22_10min_res_wo_HP_adjust.mat';
-elseif f.Main_Win.radiobutton_input_LP_AAPD.Value     == 1
-    f.Inputs.LP_Type    = 'AAPD';
-elseif f.Main_Win.radiobutton_input_LP_LZR_Tool.Value == 1
-    f.Inputs.LP_Type    = 'LZR_Tool';
-elseif f.Main_Win.radiobutton_input_LP_DB.Value       == 1
-    f.Inputs.LP_Type    = 'DB';
+% Set load profiles type
+if     f.Main_Win.radiobutton_input_LP_DB  	   .Value == 1; f.Inputs.LP_Type = 'DB'      ;
+elseif f.Main_Win.radiobutton_input_LP_LZR_Tool.Value == 1; f.Inputs.LP_Type = 'LZR_Tool';
+elseif f.Main_Win.radiobutton_input_LP_AAPD    .Value == 1; f.Inputs.LP_Type = 'AAPD'    ;
 end
 
-%% Set PV profiles type
-if f.Main_Win.radiobutton_input_PV_scada.Value        == 1
-    f.Inputs.PV_Type    = 'SCADA';
-    f.Inputs.PV_DB_Name = 'DB23_5min_res_adjust.mat';
-elseif f.Main_Win.radiobutton_input_PV_LZR_Tool.Value == 1
-    f.Inputs.PV_Type    = 'LZR_Tool';
-elseif f.Main_Win.radiobutton_input_PV_DB.Value       == 1
-    f.Inputs.PV_Type    = 'DB';
+% Set distribution type for load profiles
+if     f.Main_Win.radiobutton_input_dist_LP_list  .Value == 1; f.Inputs.LP_dist_type = 'list'  ;
+elseif f.Main_Win.radiobutton_input_dist_LP_random.Value == 1; f.Inputs.LP_dist_type = 'random';
+elseif f.Main_Win.radiobutton_input_dist_LP_manual.Value == 1; f.Inputs.LP_dist_type = 'manual';
+elseif f.Main_Win.radiobutton_input_dist_LP_sort  .Value == 1; f.Inputs.LP_dist_type = 'alphab';
+elseif f.Main_Win.radiobutton_input_dist_LP_mean  .Value == 1; f.Inputs.LP_dist_type = 'mean_P';
 end
 
-%% Set distribution type for load profiles
-if f.Main_Win.radiobutton_input_dist_LP_list.Value == 1
-        f.Inputs.LP_dist_type = 'list';
-elseif f.Main_Win.radiobutton_input_dist_LP_sort.Value == 1
-        f.Inputs.LP_dist_type = 'sort';
-elseif f.Main_Win.radiobutton_input_dist_LP_mean.Value == 1
-        f.Inputs.LP_dist_type = 'mean_P';
-elseif f.Main_Win.radiobutton_input_dist_LP_random.Value == 1
-        f.Inputs.LP_dist_type = 'random';
-elseif f.Main_Win.radiobutton_input_dist_LP_manual.Value == 1
-        f.Inputs.LP_dist_type = 'manual';
+% Set PV profiles type
+if     f.Main_Win.radiobutton_input_PV_DB      .Value == 1; f.Inputs.PV_Type = 'DB'      ;
+elseif f.Main_Win.radiobutton_input_PV_LZR_Tool.Value == 1; f.Inputs.PV_Type = 'LZR_Tool';
 end
 
-%% Set distribution type for PV profiles
-if f.Main_Win.radiobutton_input_dist_PV_list.Value == 1
-        f.Inputs.PV_dist_type = 'list';
-elseif f.Main_Win.radiobutton_input_dist_PV_random.Value == 1
-        f.Inputs.PV_dist_type = 'random';
-elseif f.Main_Win.radiobutton_input_dist_PV_manual.Value == 1
-        f.Inputs.PV_dist_type = 'manual';
+% Set distribution type for PV profiles
+if     f.Main_Win.radiobutton_input_dist_PV_list  .Value == 1; f.Inputs.PV_dist_type = 'list'  ;
+elseif f.Main_Win.radiobutton_input_dist_PV_random.Value == 1; f.Inputs.PV_dist_type = 'random';
+elseif f.Main_Win.radiobutton_input_dist_PV_manual.Value == 1; f.Inputs.PV_dist_type = 'manual';
 end
 
-%% Set path and filename for load profiles database
+% Set path and filename for load profiles database
 if f.Main_Win.radiobutton_input_LP_DB.Value == 1
-    [path,filename,ext] = fileparts(f.Main_Win.edit_DB_LP_path.String);
-    if path(end) ~= '\'
-        f.Inputs.LP_Path = [path,'\'];
-    else
-        f.Inputs.LP_Path = path;
-    end
-    f.Inputs.LP_DB_Name = [filename,ext];
+    [path, filename, ext] = fileparts(f.Main_Win.edit_DB_LP_path.String);
+    if path(end) ~= '\'; path = [path,'\']; end
+    f.Inputs.LP_DB_Path = path;
+    f.Inputs.LP_DB_Name = [filename, ext];
 end
 
-%% Set path and filename for PV profiles database
+% Set path and filename for PV profiles database
 if f.Main_Win.radiobutton_input_PV_DB.Value == 1
-    [path,filename,ext] = fileparts(f.Main_Win.edit_DB_PV_path.String);
-    if path(end) ~= '\'
-        f.Inputs.PV_Path = [path,'\'];
-    else
-        f.Inputs.PV_Path = path;
-    end
-    f.Inputs.PV_DB_Name = [filename,ext];
+    [path, filename, ext] = fileparts(f.Main_Win.edit_DB_PV_path.String);
+    if path(end) ~= '\'; path = [path,'\']; end
+    f.Inputs.PV_DB_Path = path;
+    f.Inputs.PV_DB_Name = [filename, ext];
 end
 
-%% Set path and filename for distribution list (Load and PV)
-% Load list
-[path,filename,ext] = fileparts(f.Main_Win.edit_dist_list_LP_path.String);
-if path(end) ~= '\'
-    f.Inputs.LP_dist_path = [path,'\'];
-else
-    f.Inputs.LP_dist_path = path;
+% Set path and filename for load distribution list
+if f.Main_Win.radiobutton_input_dist_LP_list.Value == 1
+    [path, filename, ext] = fileparts(f.Main_Win.edit_dist_list_LP_path.String);
+    if path(end) ~= '\'; path = [path,'\']; end
+    f.Inputs.LP_dist_path      = path;
+    f.Inputs.LP_dist_list_name = [filename, ext];
 end
-f.Inputs.LP_dist_list_name = [filename,ext];
-% PV list
-[path,filename,ext] = fileparts(f.Main_Win.edit_dist_list_PV_path.String);
-if path(end) ~= '\'
-    f.Inputs.PV_dist_path = [path,'\'];
-else
-    f.Inputs.PV_dist_path = path;
-end
-f.Inputs.PV_dist_list_name = [filename,ext];
 
-%% Set Output path and filename
+% Set path and filename for PV distribution list
+if f.Main_Win.radiobutton_input_dist_PV_list.Value == 1
+    [path, filename, ext] = fileparts(f.Main_Win.edit_dist_list_PV_path.String);
+    if path(end) ~= '\'; path = [path,'\']; end
+    f.Inputs.PV_dist_path      = path;
+    f.Inputs.PV_dist_list_name = [filename, ext];
+end
+
+% Set Output path and filename
 f.Inputs.Output_Path = f.Main_Win.text_output_path_selection.String;
 if  f.Main_Win.checkbox_output_path_filename.Value == 0
-    f.Inputs.Output_Name =  f.Main_Win.edit_output_path_filename.String;
+    f.Inputs.Output_Name = f.Main_Win.edit_output_path_filename.String;
 end
 
-%% Starting simulation with parameters
+% Starting simulation with parameters
 Mat2Sin_LPCalc(f);
 
 end
