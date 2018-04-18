@@ -41,13 +41,6 @@ elseif cases ==  [0 1 1 1]
         minutes(TimeSetup.Time_Step) : TimeSetup.Last_Moment;
 end
 
-if isfield(Inputs,'TimeSetup_instants_per_grid_ratio')
-    TimeSetup.instants_per_grid = ceil(instants_per_grid_max * Inputs.TimeSetup_instants_per_grid_ratio);
-else
-    TimeSetup.instants_per_grid = instants_per_grid_max;
-end
-
-
 % TimeSetup_Output = TimeSetup;
 
 end
