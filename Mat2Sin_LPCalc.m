@@ -1,7 +1,7 @@
 function status = Mat2Sin_LPCalc(Fig)
 %% Mat2Sin_LPCalc
 %   
-%   Mat2Sin_LPCalc     - This script demonstrates the work of the load
+%   Mat2Sin_LPCalc      - This script demonstrates the work of the load
 %                         flow calculation for load profiles (load flow 
 %                         calculation for more than one timestamp at once) 
 %                         in Sincal managed from Matlab.
@@ -30,7 +30,6 @@ function status = Mat2Sin_LPCalc(Fig)
 %                           Inputs.TimeSetup_Last_Moment
 %                           Inputs.TimeSetup_Time_Step
 %                           Inputs.TimeSetup_num_of_instants
-%                           Inputs.TimeSetup_instants_per_grid_ratio
 %                           Inputs.TimeSetup_First_Moment_PF
 %                           Inputs.TimeSetup_Last_Moment_PF
 %                           Inputs.Output_option_raw
@@ -78,6 +77,7 @@ function status = Mat2Sin_LPCalc(Fig)
 %% Default Path definition and directory preparation
 
 Inputs          = Fig.Inputs;
+% clear Fig; disp('Temp');          % TODO -> has to work in the furute without Fig!!!
 Settings        = struct;
 Output_options  = struct;
 SimDetails      = struct;
@@ -87,7 +87,6 @@ addpath                  ([cd,         '\data\Static_Input' ]);             % Ad
 Inputs_Path             = [cd,         '\Inputs\'];                         % Path for the simulation's input  files 
 Outputs_Path            = [cd,         '\Outputs\'];                        % Path for the simulation's output files
 Sin_Path_Data           = [cd,          '\Data\'];                          % Path for the simulation's data   files
-Profiles_Path_static    = [Inputs_Path,'Static_Profiles\'];                 % Path for static load and PV profiles like Smart Scada
 Settings.LP_Path        = [Inputs_Path,'Load_Profiles\'];                   % Path for load profiles
 Settings.PV_Path        = [Inputs_Path,'PV_Profiles\'];                     % Path for PV profiles
 Grid_Path               = [Inputs_Path,'Grids\'];                           % Path for input Sincal Grids
@@ -304,7 +303,6 @@ SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);            % SinInfo 
 % Loading Load Profiles Database
 switch Settings.LP_Type
     case 'SCADA'
-        % load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);        % Load the load profiles
         disp('TODO');
     case 'AAPD'
         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
@@ -322,7 +320,6 @@ switch Settings.PV_Type
     case 'DB'
         load([Settings.PV_Path,Settings.PV_DB_Name],'PV___Profiles');
     case 'SCADA'    % TODO
-        % load([Profiles_Path_static,'DB23_5min_res_adjust.mat' ]);        % Load the PV profiles
         disp('TODO');
 end
 
@@ -340,7 +337,6 @@ switch Settings.LP_dist_type
         LP2GL_Lo = alphaDistribution (SinInfo, fields_names_LoP);
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
     case 'mean_P' % TODO
-%         Scada_DB = load([Profiles_Path_static,'DB22_10min_res_wo_HP_adjust.mat']);
 %         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'3p_reuse');
 %         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'1p');
 end
@@ -706,8 +702,8 @@ Output_Filename = [Output_Name,'_Simulation_Details.mat'];
 SimData_Filename = [Outputs_Path,Output_Filename];
 
 SimDetails_Bytes = whos('SimDetails');
-SimDetails_Bytes = SimDetails_Bytes.bytes;   %#ok The variable will just be saved
-if SinInfo_Bytes > 2 * 1024^3
+SimDetails_Bytes = SimDetails_Bytes.bytes;
+if SimDetails_Bytes > 2 * 1024^3
     save(SimData_Filename,'SimDetails','-v7.3');
 else
     save(SimData_Filename,'SimDetails');
