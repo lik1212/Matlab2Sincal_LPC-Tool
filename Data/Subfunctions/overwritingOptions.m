@@ -19,5 +19,4 @@ if isfield(Inputs,'Output_option_raw'            ); options.Raw         = Inputs
 if isfield(Inputs,'Output_option_raw_only'       ); options.Raw_only    = Inputs.Output_option_raw_only         ; end
 if isfield(Inputs,'Output_option_per_node_branch'); options.Node_Branch = Inputs.Output_option_per_node_branch  ; end
 if isfield(Inputs,'Output_option_per_unit'       ); options.Unit        = Inputs.Output_option_per_unit         ; end
-if isfield(Inputs,'Output_option_raw_generated'  ); options.Unit        = Inputs.Output_option_per_unit         ; end
 Output_options = options;

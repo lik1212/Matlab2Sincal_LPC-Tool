@@ -16,9 +16,9 @@ function status = Mat2Sin_LPCalc(Fig)
 %                           Inputs.Grid_Name
 %                           Inputs.LP_Type
 %                           Inputs.PV_Type
-%                           Inputs.LP_Path
+%                           Inputs.LP_DB_Path
 %                           Inputs.LP_DB_Name
-%                           Inputs.PV_Path
+%                           Inputs.PV_DB_Path
 %                           Inputs.PV_DB_Name
 %                           Inputs.LP_dist_type
 %                           Inputs.LP_dist_path
@@ -26,12 +26,12 @@ function status = Mat2Sin_LPCalc(Fig)
 %                           Inputs.PV_dist_type
 %                           Inputs.PV_dist_path
 %                           Inputs.PV_dist_list_name
-%                           Inputs.TimeSetup_First_Moment
-%                           Inputs.TimeSetup_Last_Moment
-%                           Inputs.TimeSetup_Time_Step
-%                           Inputs.TimeSetup_num_of_instants
-%                           Inputs.TimeSetup_First_Moment_PF
-%                           Inputs.TimeSetup_Last_Moment_PF
+%                           Inputs.TimeSetup_First_Moment       (TODO)
+%                           Inputs.TimeSetup_Last_Moment        (TODO)
+%                           Inputs.TimeSetup_Time_Step          (TODO)
+%                           Inputs.TimeSetup_num_of_instants    (TODO)
+%                           Inputs.TimeSetup_First_Moment_PF    (TODO)
+%                           Inputs.TimeSetup_Last_Moment_PF     (TODO)
 %                           Inputs.Output_option_raw
 %                           Inputs.Output_option_raw_only
 %                           Inputs.Output_option_per_node_branch
@@ -39,7 +39,6 @@ function status = Mat2Sin_LPCalc(Fig)
 %                           Inputs.Output_option_del_temp_files
 %                           Inputs.Output_option_del_temp_files_begin
 %                           Inputs.Output_option_preparation
-%                           Inputs.Output_option_raw_generated
 %                           Inputs.Output_option_U
 %                           Inputs.Output_option_P
 %                           Inputs.Output_option_Q
@@ -52,9 +51,10 @@ function status = Mat2Sin_LPCalc(Fig)
 %                           Inputs.Output_option_T_vector
 %                           Inputs.Output_option_Sin_Info
 %                           Inputs.Output_Path
-%                           Inputs.Output_Name
-%                           Inputs.Option_debug
-%                           
+%                           Inputs.Output_Name  
+%                           Inputs.Data_Path
+%                           Inputs.Inputs_Path
+%                           Inputs.Outputs_Path
 %   Flowchart:
 %
 %                   1. Clear start
@@ -70,32 +70,89 @@ function status = Mat2Sin_LPCalc(Fig)
 %                   11. Load flow calculation with load profiles
 %                   12. Delete overhead
 %
-%   Author(s): J. Greiner
-%              R. Brandalik
-%              P. Gassler
+%
+% Author(s): R. Brandalik
+%            P. Gassler
+%            J. Greiner
+%            H. Kreten
+%
+% Contact: brandalikrobert@gmail.com, brandalik@eit.uni-kl.de
+%
+% Special thanks go to the entire TUK ESEM team.
+%
+% Parts of the work were the result of the project CheapFlex, sponsored by
+% the German Federal Ministry of Economic Affairs and Energy as part of the
+% 6th Energy Research Programme of the German Federal Government.
 
-%% Default Path definition and directory preparation
+%% TODO: Temporary
 
-Inputs          = Fig.Inputs;
+close all;
+load('temp_Fig.mat')
+Fig1 = figure(findobj('type','figure','Tag','LPC_Tool'));
+Fig1.Visible = 'off';
+
+%% Read out Inputs
+
+Inputs  = Fig.Inputs;
 % clear Fig; disp('Temp');          % TODO -> has to work in the furute without Fig!!!
-Settings        = struct;
+
+%% Default Path definition and directory preparation (TODO)
+
+addpath                  ([cd,         '\data\Subfunctions' ]); % Add Subfunction path
+addpath                  ([cd,         '\data\Static_Input' ]); % Add path for static input (e.q. column names in a database)
+Inputs_Path             = [cd,         '\Inputs\'           ];  % Path for the simulation's input  files 
+Outputs_Path            = [cd,         '\Outputs\'          ];  % Path for the simulation's output files
+Sin_Path_Data           = [cd,         '\Data\'             ];  % Path for the simulation's data   files
+Grid_Path               = [Inputs_Path,'Grids\'             ];  % Path for input Sincal Grids
+Sin_Path                = [cd,         '\Temp\'             ];  % Path for Sincal Simulation files
+Sin_Path_Input          = [Sin_Path,   'InputFiles\'        ];  % Path for Sincal Temp Input Files
+Sin_Path_Output         = [Sin_Path,   'OutputFiles\'       ];  % Path for Sincal Temp Output Files
+Sin_Path_Grids          = [Sin_Path,   'Grids\'             ];  % Path for Sincal Temp copies of Grids
+
+%% Default setting
+
+Settings = struct;
+Settings.LP_DB_Path                         = [Inputs_Path,'Load_Profiles\'         ]; % Path for load profiles
+Settings.PV_DB_Path                         = [Inputs_Path,'PV_Profiles\'           ]; % Path for PV profiles
+Settings.LP_dist_Path                       = [Inputs_Path,'Profiles_Distribution\' ]; % Path for the L.P. distribution file
+Settings.PV_dist_Path                       = [Inputs_Path,'Profiles_Distribution\' ]; % Path for the PV.P. distribution file
+Settings.PV_dist_list_name                  = 'DCInfeederNameOriginal.txt';
+Settings.LP_DB_Name                         = 'LP_database.mat';
+Settings.PV_DB_Name                         = 'PV_database.mat';
+Settings.Output_option_del_temp_files       = false;                                   % delete all temporary simulation files after simulation is complete
+Settings.Output_option_del_temp_files_begin = true;
+Settings.Output_option_preparation          = true;
+Settings.LP_Type                            = 'SCADA';                                                          
+Settings.PV_Type                            = 'SCADA';                                                          
+Settings.LP_dist_type                       = 'list';                                                  
+Settings.PV_dist_type                       = 'list';                                  % Struct with all options for the outputed data
+SinName                                     = 'Wessum-Riete_Netz_170726_empty';
+
+%%
+
 Output_options  = struct;
+Output_options.U = true;
+Output_options.P = true;
+Output_options.Q = true;
+Output_options.S = true;
+Output_options.phi = true;
+Output_options.I = true;
+Output_options.P_flow = true;
+Output_options.Q_flow = true;
+Output_options.S_flow = true;
+Output_options.T_vector = true;
+Output_options.Sin_Info = true;
+Output_options.Raw = false;
+Output_options.Raw_only = false;
+Output_options.Node_Branch = true;
+Output_options.Unit = true;
+Output_options.Raw_generated = false;
+
+%%
+
 SimDetails      = struct;
 
-addpath                  ([cd,         '\data\Subfunctions'  ]);            % Add Subfunction path
-addpath                  ([cd,         '\data\Static_Input' ]);             % Add path for static input (e.q. column names in a database)
-Inputs_Path             = [cd,         '\Inputs\'];                         % Path for the simulation's input  files 
-Outputs_Path            = [cd,         '\Outputs\'];                        % Path for the simulation's output files
-Sin_Path_Data           = [cd,          '\Data\'];                          % Path for the simulation's data   files
-Settings.LP_Path        = [Inputs_Path,'Load_Profiles\'];                   % Path for load profiles
-Settings.PV_Path        = [Inputs_Path,'PV_Profiles\'];                     % Path for PV profiles
-Grid_Path               = [Inputs_Path,'Grids\'];                           % Path for input Sincal Grids
-Settings.LP_dist_Path   = [Inputs_Path,'Profiles_Distribution\'];           % Path for the L.P. distribution file
-Settings.PV_dist_Path   = [Inputs_Path,'Profiles_Distribution\'];           % Path for the PV.P. distribution file
-Sin_Path                = [cd,         '\Temp\' ];                          % Path for Sincal Simulation files
-Sin_Path_Input          = [Sin_Path,   'InputFiles\'];                      % Path for Sincal Temp Input Files
-Sin_Path_Output         = [Sin_Path,   'OutputFiles\'];                     % Path for Sincal Temp Output Files
-Sin_Path_Grids          = [Sin_Path,   'Grids\'];                           % Path for Sincal Temp copies of Grids
+
 
 %% Main progress bar initialisation
 
@@ -118,13 +175,6 @@ Sin_Path_Grids          = [Sin_Path,   'Grids\'];                           % Pa
 % %     set(main_waitbar,'Visible','on');
 % end
 
-%% Default Names definition
-
-Settings.PV_dist_list_name = 'DCInfeederNameOriginal.txt';
-Settings.LP_DB_Name        = 'LP_database.mat';
-Settings.PV_DB_Name        = 'PV_database.mat';
-SinName                    = 'Wessum-Riete_Netz_170726_empty';
-
 %% Setting up Time Vector and Number of Instants
 
 % Default values
@@ -144,39 +194,13 @@ TimeSetup = struct;
 
 %% Global variables definition and default value assignment
 % structure with all settings variables
-Settings.del_sim_files          = false;                                    % delete all temporary simulation files after simulation is complete
-Settings.del_sim_files_begin    = true;
-Settings.del_sim_files_inst     = false;                                	% delete temporary stored simulation files as soon as these are not needed anymore
-Settings.output_prepare         = true;
-% Settings.txt2db = true;                                                     % to implement
-% Settings.simulation = true;                                                 % to implement
-% Settings.db2txt = true;                                                     % to implement
-Settings.LP_Type                = 'SCADA';                                                          
-Settings.PV_Type                = 'SCADA';                                                          
-Settings.LP_dist_type           = 'list';                                                  
-Settings.PV_dist_type           = 'list';                                   % Struct with all options for the outputed data
-Output_options.U = true;
-Output_options.P = true;
-Output_options.Q = true;
-Output_options.S = true;
-Output_options.phi = true;
-Output_options.I = true;
-Output_options.P_flow = true;
-Output_options.Q_flow = true;
-Output_options.S_flow = true;
-Output_options.T_vector = true;
-Output_options.Sin_Info = true;
-Output_options.Raw = false;
-Output_options.Raw_only = false;
-Output_options.Node_Branch = true;
-Output_options.Unit = true;
-Output_options.Raw_generated = false;
+
 
 %% Overwriting parameters with Inputs
 % Options, Paths and Names are been overwritten with Inputs values if some
 % exists
 
-if nargin==1
+if nargin == 1
     if isfield(Inputs,'Grid_Path') 
         Grid_Path = Inputs.Grid_Path;
         if Grid_Path(end)~='\'
@@ -193,10 +217,9 @@ if nargin==1
     Output_options = overwritingOptions(Inputs,Output_options);
 end
 
-% if ~Settings.output_prepare
-%     Settings.del_sim_files = false;
-%     Settings.del_sim_files_inst = false;
-% end
+if ~Settings.Output_option_preparation
+    Settings.Output_option_del_temp_files = false;
+end
 
 %% Estimating time for waitbar
 
@@ -214,7 +237,7 @@ end
 
 %% Delete all the simulation files at the beginning
 
-if Settings.del_sim_files_begin
+if Settings.Output_option_del_temp_files_begin
     if isfolder(Sin_Path_Input ); rmdir(Sin_Path_Input, 's'); end           % delete input  Files
     if isfolder(Sin_Path_Output); rmdir(Sin_Path_Output,'s'); end           % delete output Files   
     if isfolder(Sin_Path_Grids ); rmdir(Sin_Path_Grids, 's'); end           % delete grids  Files
@@ -310,7 +333,7 @@ switch Settings.LP_Type
         SimData_Filename = [Outputs_Path,Output_Filename];
         save(SimData_Filename,'Load_Profiles','-v7.3');
     case 'DB'
-        Load_Profiles = load([Settings.LP_Path,Settings.LP_DB_Name]);
+        Load_Profiles = load([Settings.LP_DB_Path,Settings.LP_DB_Name]);
         fields_LP = fields(Load_Profiles);
         Load_Profiles = Load_Profiles.(fields_LP{:});
 end
@@ -318,7 +341,7 @@ end
 % Loading PV Profiles Database
 switch Settings.PV_Type
     case 'DB'
-        load([Settings.PV_Path,Settings.PV_DB_Name],'PV___Profiles');
+        load([Settings.PV_DB_Path,Settings.PV_DB_Name],'PV___Profiles');
     case 'SCADA'    % TODO
         disp('TODO');
 end
@@ -617,7 +640,7 @@ end
 
 %% Output preperation
 
-if Settings.output_prepare
+if Settings.Output_option_preparation
 
 %     % Waitbar Update
 %     if waitbar_activ
@@ -712,7 +735,7 @@ end
 
 %% Delete all temporary simulation files
 
-if Settings.del_sim_files    
+if Settings.Output_option_del_temp_files    
     rmdir(Sin_Path_Input ,'s'); % delete input  Files    
     rmdir(Sin_Path_Output,'s'); % delete output Files    
     rmdir(Sin_Path_Grids ,'s'); % delete grids  Files
