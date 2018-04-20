@@ -106,61 +106,24 @@ Sin_Path_Output         = [Sin_Path,   'OutputFiles\'       ];  % Path for Sinca
 Sin_Path_Grids          = [Sin_Path,   'Grids\'             ];  % Path for Sincal Temp copies of Grids
 Sim_Path_Data           = [pwd,'\Data\Static_Input\'];     % Path for the simulation's data   files
 
+%% Set the settings based on the Inputs
+
+Settings = defaultSettings(Inputs);
+
+%% HMMM TODO
+
+
+if ~Settings.Output_option_preparation
+    Settings.Output_option_del_temp_files = false;
+end
+
+
 %% 
 
 Outputs_Path            = Inputs.Outputs_Path;  % Path for the simulation's output files
 Grid_Path               = Inputs.Grid_Path;     % Path for input Sincal Grids
 Grid_Name               = Inputs.Grid_Name;     % Grid name of Sincal Grid
 
-%% Default setting: Struct with all options for the outputed data
-
-% Settings = struct;
-% Settings.LP_DB_Path         = [Inputs_Path,'Load_Profiles\'         ]   ; % Path for load profiles
-% Settings.LP_DB_Name         = 'IEEE_Lo_Profiles.mat'                    ;
-% Settings.LP_DB_Type         = 'DB'                                      ;
-% 
-% Settings.LP_dist_path       = [Inputs_Path,'Profiles_Distribution\' ]   ; % Path for the L.P. distribution file    
-% Settings.LP_dist_list_name  = 'LoadName_IEEE_LV_Profiles.txt'           ; 
-% Settings.LP_dist_type       = 'list'                                    ;
-% 
-% Settings.PV_DB_Path         = [Inputs_Path,'PV_Profiles\'           ]   ; % Path for PV profiles
-% Settings.PV_DB_Name         = 'IEEE_PV_Profiles.mat'                    ;
-% Settings.PV_DB_Type         = 'DB'                                      ;
-% 
-% Settings.PV_dist_path       = [Inputs_Path,'Profiles_Distribution\' ]   ; % Path for the PV.P. distribution file
-% Settings.PV_dist_list_name  = 'DCInfeederName_IEEE_LV_Profiles.txt'     ;
-% Settings.PV_dist_type       = 'list'                                    ;
-% 
-% Settings.Output_option_del_temp_files       = false;	% delete all temporary simulation files after simulation is complete
-% Settings.Output_option_del_temp_files_begin = true;     % TODO, see comment later
-% Settings.Output_option_preparation          = true;
-% 
-% Settings.Grid_Path = [Inputs_Path, 'Grids\'];
-% Settings.Grid_Name = 'IEEE_LV_EU_TestFeeder';
-% 
-% Settings.VerSincal      = 13  ;
-% Settings.ParrallelCom   = true;
-% Settings.NumelCores     = 3   ;
-
-%% Default
-
-Output_options                  = struct;
-Output_options.U                = true  ;
-Output_options.P                = true  ;
-Output_options.Q                = true  ;
-Output_options.S                = true  ;
-Output_options.phi              = true  ;
-Output_options.I                = true  ;
-Output_options.P_flow           = true  ;
-Output_options.Q_flow           = true  ;
-Output_options.S_flow           = true  ;
-Output_options.T_vector         = true  ;
-Output_options.Sin_Info         = true  ;
-Output_options.Raw              = false ;
-Output_options.Raw_only         = false ;
-Output_options.Node_Branch      = true  ;
-Output_options.Unit             = true  ;
-Output_options.Raw_generated    = false ;
 
 %% Main progress bar initialisation
 
@@ -204,18 +167,6 @@ TimeSetup = struct;
 % structure with all settings variables
 
 
-%% Overwriting parameters with Inputs
-% Options, Paths and Names are been overwritten with Inputs values if some
-% exists
-
-Settings       = Inputs;
-Output_options = overwritingOptions (Inputs,Output_options);
-
-
-if ~Settings.Output_option_preparation
-    Settings.Output_option_del_temp_files = false;
-end
-
 %% Estimating time for waitbar
 
 % if waitbar_activ
@@ -253,8 +204,8 @@ Col_Name_ULFBranchResult           = load('Col_Name_ULFBranchResult.mat');
 Col_Name_ULFBranchResult_fieldname = fieldnames(Col_Name_ULFBranchResult);
 Col_Name_ULFBranchResult           = Col_Name_ULFBranchResult.(Col_Name_ULFBranchResult_fieldname{1});
 
-NodeVector   = calcNodeOutputVector  (Output_options);
-BranchVector = calcBranchOutputVector(Output_options);
+NodeVector   = calcNodeOutputVector  (Settings);
+BranchVector = calcBranchOutputVector(Settings);
 
 %% Prepare the Sincal grid
 
@@ -629,9 +580,9 @@ if Settings.Output_option_preparation
 %     end
     for k = 1 : 2   % TODO Made it over parfor?
         if k == 1
-            Output_read_NodeRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options);
+            Output_read_NodeRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Settings);
         else
-            Output_read_BranchRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options);
+            Output_read_BranchRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Settings);
         end
     end
 %     if Output_options.T_vector
@@ -639,7 +590,7 @@ if Settings.Output_option_preparation
 %         SimData_Filename = [Outputs_Path,Output_Filename];
 %         save(SimData_Filename,'Time_Vector','-v7.3');
 %     end
-    if Output_options.Sin_Info
+    if Settings.Output_option_Sin_Info
         Output_Filename  = [Output_Name,'_Grid_Info.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
         SinInfo_Bytes = whos('SinInfo');
@@ -685,7 +636,7 @@ SimDetails.LoadProfiles_Distribution_List   = LP2GL_Lo                      ;
 SimDetails.PVProfiles_Distribution_List     = LP2GL_Pv                      ;
 SimDetails.LoadProfiles_Database_Name       = Settings.LP_DB_Name           ;
 SimDetails.PVProfiles_Database_Name         = Settings.PV_DB_Name           ;
-SimDetails.Output_content                   = Output_options                ;
+SimDetails.Output_content                   = Settings                ;
 SimDetails.SimType                          = 'PF'                          ; %#ok % Will be just saved
 % SimDetails.First_Moment                   = TimeSetup.First_Moment        ;
 % SimDetails.Last_Moment                    = TimeSetup.Last_Moment         ;

@@ -575,21 +575,21 @@ end
 function Start_Output_Processing(~,~,f)
 
 %% Set Output options
-Output_options.U = logical(f.Output_Win.checkbox_output_data_selection_U.Value);
-Output_options.P = logical(f.Output_Win.checkbox_output_data_selection_P.Value);
-Output_options.Q = logical(f.Output_Win.checkbox_output_data_selection_Q.Value);
-Output_options.S = logical(f.Output_Win.checkbox_output_data_selection_S.Value);
-Output_options.phi = logical(f.Output_Win.checkbox_output_data_selection_Phi.Value);
-Output_options.I = logical(f.Output_Win.checkbox_output_data_selection_I.Value);
-Output_options.P_flow = logical(f.Output_Win.checkbox_output_data_selection_P_flow.Value);
-Output_options.Q_flow = logical(f.Output_Win.checkbox_output_data_selection_Q_flow.Value);
-Output_options.S_flow = logical(f.Output_Win.checkbox_output_data_selection_S_flow.Value);
-Output_options.T_vector = logical(f.Output_Win.checkbox_output_data_selection_T_Vector.Value);
-Output_options.Sin_Info = logical(f.Output_Win.checkbox_output_data_selection_Sin_Info.Value);
-Output_options.Raw = logical(f.Output_Win.checkbox_output_data_selection_raw.Value);
-Output_options.Raw_only = logical(f.Output_Win.checkbox_select_raw_only.Value);
-Output_options.Node_Branch = logical(f.Output_Win.checkbox_output_data_selection_per_node_branch.Value);
-Output_options.Unit = logical(f.Output_Win.checkbox_output_data_selection_per_unit.Value);
+Output_options.Output_option_U = logical(f.Output_Win.checkbox_output_data_selection_U.Value);
+Output_options.Output_option_P = logical(f.Output_Win.checkbox_output_data_selection_P.Value);
+Output_options.Output_option_Q = logical(f.Output_Win.checkbox_output_data_selection_Q.Value);
+Output_options.Output_option_S = logical(f.Output_Win.checkbox_output_data_selection_S.Value);
+Output_options.Output_option_phi = logical(f.Output_Win.checkbox_output_data_selection_Phi.Value);
+Output_options.Output_option_I = logical(f.Output_Win.checkbox_output_data_selection_I.Value);
+Output_options.Output_option_P_flow = logical(f.Output_Win.checkbox_output_data_selection_P_flow.Value);
+Output_options.Output_option_Q_flow = logical(f.Output_Win.checkbox_output_data_selection_Q_flow.Value);
+Output_options.Output_option_S_flow = logical(f.Output_Win.checkbox_output_data_selection_S_flow.Value);
+Output_options.Output_option_T_vector = logical(f.Output_Win.checkbox_output_data_selection_T_Vector.Value);
+Output_options.Output_option_Sin_Info = logical(f.Output_Win.checkbox_output_data_selection_Sin_Info.Value);
+Output_options.Output_option_raw = logical(f.Output_Win.checkbox_output_data_selection_raw.Value);
+Output_options.Output_option_raw_only = logical(f.Output_Win.checkbox_select_raw_only.Value);
+Output_options.Output_option_per_node_branch = logical(f.Output_Win.checkbox_output_data_selection_per_node_branch.Value);
+Output_options.Output_option_per_unit = logical(f.Output_Win.checkbox_output_data_selection_per_unit.Value);
 Output_options.Raw_generated = logical(f.Output_Win.radiobutton_output_data.Value);
 
 
@@ -616,10 +616,10 @@ if f.Output_Win.radiobutton_sim_details.Value == 1
         Output_options.Q_flow = Output_options.Q_flow & SimDetails.Output_content.Q_flow;
         Output_options.S_flow = Output_options.S_flow & SimDetails.Output_content.S_flow;
 %         Output_options.T_vector = Output_options.T_vector & SimDetails.Output_content.T_vector;
-%         Output_options.Sin_Info = Output_options.Sin_Info & SimDetails.Output_content.Sin_Info;
+%         Output_options.Output_option_Sin_Info = Output_options.Sin_Info & SimDetails.Output_content.Sin_Info;
 %         Output_options.Raw = 
 %         Output_options.Raw_only =
-%         Output_options.Node_Branch = 
+%         Output_options.Output_option_per_node_branch = 
 %         Output_options.Unit =
 %         Output_options.Raw_generated = Output_options.U & SimDetails.Output_content.U;
     end

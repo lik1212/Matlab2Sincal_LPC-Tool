@@ -1,22 +1,29 @@
-function Output_options = overwritingOptions(Inputs, options)
-% overwritingOptions checks the content of Inputs and overwrite the options
-% for simulation output with this content
+function Settings = defaultSettings(Inputs)
+% defaultSettings checks the content of Inputs and based on it define the
+% Settings. If some optional field do not occur in "Inputs" set the default
+% values for it.
 %
 % Author(s): P. Gassler, R. Brandalik
 
-if isfield(Inputs,'Output_option_U'              ); options.U           = Inputs.Output_option_U                ; end
-if isfield(Inputs,'Output_option_P'              ); options.P           = Inputs.Output_option_P                ; end
-if isfield(Inputs,'Output_option_Q'              ); options.Q           = Inputs.Output_option_Q                ; end
-if isfield(Inputs,'Output_option_S'              ); options.S           = Inputs.Output_option_S                ; end
-if isfield(Inputs,'Output_option_phi'            ); options.phi         = Inputs.Output_option_phi              ; end
-if isfield(Inputs,'Output_option_I'              ); options.I           = Inputs.Output_option_I                ; end
-if isfield(Inputs,'Output_option_P_flow'         ); options.P_flow      = Inputs.Output_option_P_flow           ; end
-if isfield(Inputs,'Output_option_Q_flow'         ); options.Q_flow      = Inputs.Output_option_Q_flow           ; end
-if isfield(Inputs,'Output_option_S_flow'         ); options.S_flow      = Inputs.Output_option_S_flow           ; end
-if isfield(Inputs,'Output_option_T_vector'       ); options.T_vector    = Inputs.Output_option_T_vector         ; end
-if isfield(Inputs,'Output_option_Sin_Info'       ); options.Sin_Info    = Inputs.Output_option_Sin_Info         ; end
-if isfield(Inputs,'Output_option_raw'            ); options.Raw         = Inputs.Output_option_raw              ; end
-if isfield(Inputs,'Output_option_raw_only'       ); options.Raw_only    = Inputs.Output_option_raw_only         ; end
-if isfield(Inputs,'Output_option_per_node_branch'); options.Node_Branch = Inputs.Output_option_per_node_branch  ; end
-if isfield(Inputs,'Output_option_per_unit'       ); options.Unit        = Inputs.Output_option_per_unit         ; end
-Output_options = options;
+%% Transfer main info from "Inputs
+
+Settings = Inputs;
+
+%% Default setting if the inputs do not occur in the variable "Inputs"
+
+if ~isfield(Inputs,'Output_option_U'              ); Settings.Output_option_U                = true  ; end
+if ~isfield(Inputs,'Output_option_P'              ); Settings.Output_option_P                = true  ; end
+if ~isfield(Inputs,'Output_option_Q'              ); Settings.Output_option_Q                = true  ; end
+if ~isfield(Inputs,'Output_option_S'              ); Settings.Output_option_S                = true  ; end
+if ~isfield(Inputs,'Output_option_phi'            ); Settings.Output_option_phi              = true  ; end
+if ~isfield(Inputs,'Output_option_I'              ); Settings.Output_option_I                = true  ; end
+if ~isfield(Inputs,'Output_option_P_flow'         ); Settings.Output_option_P_flow           = true  ; end
+if ~isfield(Inputs,'Output_option_Q_flow'         ); Settings.Output_option_Q_flow           = true  ; end
+if ~isfield(Inputs,'Output_option_S_flow'         ); Settings.Output_option_S_flow           = true  ; end
+if ~isfield(Inputs,'Output_option_Sin_Info'       ); Settings.Output_option_Sin_Info         = true  ; end
+if ~isfield(Inputs,'Output_option_raw'            ); Settings.Output_option_raw              = false ; end
+if ~isfield(Inputs,'Output_option_raw_only'       ); Settings.Output_option_raw_only         = false ; end
+if ~isfield(Inputs,'Output_option_per_node_branch'); Settings.Output_option_per_node_branch  = true  ; end
+if ~isfield(Inputs,'Output_option_per_unit'       ); Settings.Output_option_per_unit         = true  ; end
+if ~isfield(Inputs,'Output_option_Sin_Info'       ); Settings.Output_option_Sin_Info         = true  ; end
+% if ~isfield(Inputs,'Output_option_T_vector'       ); Settings.T_vector         = true  ; end

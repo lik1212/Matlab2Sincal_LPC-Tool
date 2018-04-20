@@ -1,11 +1,11 @@
-function Output_read_BranchRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options)
+function Output_read_BranchRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Settings)
 %% 
 %   Author(s): P. Gassler
 %              based on code from R. Brandalik
 %
 
 %% Import NodeRes Files in Matlab memory
-if ~Output_options.Raw_generated
+if ~Settings.Output_option_raw
     for k_grid = 1 : num_grids
         BranchRes_Name = [Sin_Path_Output,'BranchRes_',SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'.txt'];
         if k_grid == 1
@@ -96,7 +96,7 @@ if ~Output_options.Raw_generated
     SimData = sortrows(SimData,'ResTime','ascend');
 
     %% Saving only RAW data in a file and leaving function
-    if Output_options.Raw_only
+    if Settings.Output_option_raw
         Output_Filename = [Output_Name,'_BranchRes_raw.mat'];
         SimData_Filename = [Save_Path,Output_Filename];
         BranchRes_all = SimData;
@@ -109,7 +109,7 @@ if ~Output_options.Raw_generated
             save(SimData_Filename,'BranchRes_all');
         end
         return
-    elseif Output_options.Raw
+    elseif Settings.Output_option_raw
         Output_Filename = [Output_Name,'_BranchRes_raw.mat'];
         SimData_Filename = [Save_Path,Output_Filename];
         BranchRes_all = SimData;
@@ -122,8 +122,8 @@ if ~Output_options.Raw_generated
         end
     end
 else
-    if isfield(Output_options,'Input_Filename')
-        SimData_Filename = Output_options.Input_Filename;
+    if isfield(Settings,'Input_Filename')
+        SimData_Filename = Settings.Input_Filename;
     else
         Output_Filename = [SinNameBasic,'_BranchRes_raw.mat'];
         SimData_Filename = [Sin_Path_Output,Output_Filename];
@@ -245,26 +245,26 @@ SimData_ID_down.Node2_ID = [];
 
 %% Declaration of Database for results classified per Node or per Unit
 
-if Output_options.Node_Branch
+if Settings.Output_option_per_node_branch
     SimResults_Branches_per_branches = struct;
     for k = 1 : numel([LineName,TR2WName])
         SimResults_Branches_per_branches.(BranchNames{k}) = table;
     end
 end
-if Output_options.Unit
+if Settings.Output_option_per_unit
     SimResults_Branches_per_units = struct;
     SimResults_Branches_per_units.Branches = Branches;
-    if Output_options.T_vector
+%     if Settings.T_vector
 %         SimResults_Branches_per_units.Time_Vector = Time_Vector;
-    end
-    if Output_options.Sin_Info
+%     end
+    if Settings.Output_option_Sin_Info
         SimResults_Branches_per_units.Grid_Info = SinInfo;
     end
 end
 
 %% Saving Current Flow L1
 
-if Output_options.I
+if Settings.Output_option_I
     
     I_L1_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     I_L1_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -280,11 +280,11 @@ if Output_options.I
     
     clear I_L1_up I_L1_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.I_L1 = table;
         SimResults_Branches_per_units.I_L1 = array2table(I_L1,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).I_L1 = I_L1(:,k);
         end
@@ -296,7 +296,7 @@ end
 
 %% Saving Current Flow L2
 
-if Output_options.I
+if Settings.Output_option_I
     
     I_L2_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     I_L2_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -312,11 +312,11 @@ if Output_options.I
     
     clear I_L2_up I_L2_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.I_L2 = table;
         SimResults_Branches_per_units.I_L2 = array2table(I_L2,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).I_L2 = I_L2(:,k);
         end
@@ -328,7 +328,7 @@ end
 
 %% Saving Current Flow L3
 
-if Output_options.I
+if Settings.Output_option_I
     
     I_L3_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     I_L3_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -344,11 +344,11 @@ if Output_options.I
     
     clear I_L3_up I_L3_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.I_L3 = table;
         SimResults_Branches_per_units.I_L3 = array2table(I_L3,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).I_L3 = I_L3(:,k);
         end
@@ -360,7 +360,7 @@ end
 
 %% Saving active Power Flow L1
 
-if Output_options.P_flow
+if Settings.Output_option_P_flow
     
     P_L1_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     P_L1_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -376,11 +376,11 @@ if Output_options.P_flow
     
     clear P_L1_up P_L1_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.P_L1 = table;
         SimResults_Branches_per_units.P_L1 = array2table(P_L1,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).P_L1 = P_L1(:,k);
         end
@@ -392,7 +392,7 @@ end
 
 %% Saving active Power Flow L2
 
-if Output_options.P_flow
+if Settings.Output_option_P_flow
     
     P_L2_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     P_L2_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -408,11 +408,11 @@ if Output_options.P_flow
     
     clear P_L2_up P_L2_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.P_L2 = table;
         SimResults_Branches_per_units.P_L2 = array2table(P_L2,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).P_L2 = P_L2(:,k);
         end
@@ -424,7 +424,7 @@ end
 
 %% Saving active Power Flow L3
 
-if Output_options.P_flow
+if Settings.Output_option_P_flow
     
     P_L3_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     P_L3_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -440,11 +440,11 @@ if Output_options.P_flow
     
     clear P_L3_up P_L3_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.P_L3 = table;
         SimResults_Branches_per_units.P_L3 = array2table(P_L3,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).P_L3 = P_L3(:,k);
         end
@@ -456,7 +456,7 @@ end
 
 %% Saving reactive Power Flow L1
 
-if Output_options.Q_flow
+if Settings.Output_option_Q_flow
     
     Q_L1_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     Q_L1_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -472,11 +472,11 @@ if Output_options.Q_flow
     
     clear Q_L1_up Q_L1_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.Q_L1 = table;
         SimResults_Branches_per_units.Q_L1 = array2table(Q_L1,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).Q_L1 = Q_L1(:,k);
         end
@@ -488,7 +488,7 @@ end
 
 %% Saving reactive Power Flow L2
 
-if Output_options.Q_flow
+if Settings.Output_option_Q_flow
     
     Q_L2_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     Q_L2_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -504,11 +504,11 @@ if Output_options.Q_flow
     
     clear Q_L2_up Q_L2_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.Q_L2 = table;
         SimResults_Branches_per_units.Q_L2 = array2table(Q_L2,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).Q_L2 = Q_L2(:,k);
         end
@@ -520,7 +520,7 @@ end
 
 %% Saving reactive Power Flow L3
 
-if Output_options.Q_flow
+if Settings.Output_option_Q_flow
     
     Q_L3_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     Q_L3_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -536,11 +536,11 @@ if Output_options.Q_flow
     
     clear Q_L3_up Q_L3_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.Q_L3 = table;
         SimResults_Branches_per_units.Q_L3 = array2table(Q_L3,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).Q_L3 = Q_L3(:,k);
         end
@@ -552,7 +552,7 @@ end
 
 %% Saving apparent Power Flow L1
 
-if Output_options.S_flow
+if Settings.Output_option_S_flow
     
     S_L1_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     S_L1_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -568,11 +568,11 @@ if Output_options.S_flow
     
     clear S_L1_up S_L1_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.S_L1 = table;
         SimResults_Branches_per_units.S_L1 = array2table(S_L1,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).S_L1 = S_L1(:,k);
         end
@@ -584,7 +584,7 @@ end
 
 %% Saving apparent Power Flow L2
 
-if Output_options.S_flow
+if Settings.Output_option_S_flow
     
     S_L2_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     S_L2_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -600,11 +600,11 @@ if Output_options.S_flow
     
     clear S_L2_up S_L2_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.S_L2 = table;
         SimResults_Branches_per_units.S_L2 = array2table(S_L2,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).S_L2 = S_L2(:,k);
         end
@@ -616,7 +616,7 @@ end
 
 %% Saving apparent Power Flow L3
 
-if Output_options.S_flow
+if Settings.Output_option_S_flow
     
     S_L3_up = zeros(instants_per_grid*num_grids,numel(ElementID));
     S_L3_down = zeros(instants_per_grid*num_grids,numel(ElementID));
@@ -632,11 +632,11 @@ if Output_options.S_flow
     
     clear S_L3_up S_L3_down;
     
-    if Output_options.Unit
+    if Settings.Output_option_per_unit
         SimResults_Branches_per_units.S_L3 = table;
         SimResults_Branches_per_units.S_L3 = array2table(S_L3,'VariableNames',BranchVarNames);
     end
-    if Output_options.Node_Branch
+    if Settings.Output_option_per_node_branch
         for k = 1 : numel(ElementID)
             SimResults_Branches_per_branches.(BranchNames{k}).S_L3 = S_L3(:,k);
         end
@@ -648,7 +648,7 @@ end
 
 %% Saving the results in .mat files
 
-if Output_options.Unit
+if Settings.Output_option_per_unit
     Output_Filename = [Output_Name,'_BranchRes_per_units.mat'];
     SimData_Filename = [Save_Path,Output_Filename];
     SimResults_Branches_per_units_Bytes = whos('SimResults_Branches_per_units');
@@ -660,7 +660,7 @@ if Output_options.Unit
     end
     disp([SimData_Filename,' saved.']);
 end
-if Output_options.Node_Branch
+if Settings.Output_option_per_node_branch
     Output_Filename = [Output_Name,'_BranchRes_per_branches.mat'];
     SimData_Filename = [Save_Path,Output_Filename];
     SimResults_Branches_per_branches_Bytes = whos('SimResults_Branches_per_units');
