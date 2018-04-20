@@ -2,8 +2,6 @@
 Inputs = struct;
 % Inputs.Grid_Path = 'Z:\Gassler\7_Hiwi\Grids';
 % Inputs.Grid_Path = 'Z:\Gassler\7_Hiwi\Grids\Sincal 13';
-% Inputs.Grid_Name = 'SmartSCADA_Netzmodell_2015_11_30';
-% Inputs.Grid_Name = 'SmartSCADA_Netzmodell_2015_11_30_SIN13';
 % Inputs.Grid_Name = 'Wessum-Riete_Netz_170726_1';
 % Inputs.Grid_Name = 'Wessum-Riete_Netz_170726_empty';
 Inputs.LP_dist_type = 'random';

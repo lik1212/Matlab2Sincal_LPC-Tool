@@ -51,26 +51,27 @@ end
 % Prepare output
 switch output_type
     case 'SCADA'
-        k_LP_3 = 0;
-        for k_LP = 1 : 3 : nb_LPs
-            k_LP_3 = k_LP_3 + 1;
-            AAPD_LP = table;
-            AAPD_LP.P_B_L1_abs = AAPD_P(:,k_LP);
-            AAPD_LP.P_B_L2_abs = AAPD_P(:,k_LP+1);
-            AAPD_LP.P_B_L3_abs = AAPD_P(:,k_LP+2);
-            AAPD_LP.Q_B_L1_abs = AAPD_Q(:,k_LP);
-            AAPD_LP.Q_B_L2_abs = AAPD_Q(:,k_LP+1);
-            AAPD_LP.Q_B_L3_abs = AAPD_Q(:,k_LP+2);
-            AAPD_LP.P_L_L1_abs = zeros(nb_instants,1);
-            AAPD_LP.P_L_L2_abs = zeros(nb_instants,1);
-            AAPD_LP.P_L_L3_abs = zeros(nb_instants,1);
-            AAPD_LP.Q_L_L1_abs = zeros(nb_instants,1);
-            AAPD_LP.Q_L_L2_abs = zeros(nb_instants,1);
-            AAPD_LP.Q_L_L3_abs = zeros(nb_instants,1);
-
-            fieldname_LP = ['MP_SYNTH_AAPD_',num2str(k_LP_3)];
-            DB_synth_AAPD.(fieldname_LP) = AAPD_LP;
-        end
+        disp('TODO');
+%         k_LP_3 = 0;
+%         for k_LP = 1 : 3 : nb_LPs
+%             k_LP_3 = k_LP_3 + 1;
+%             AAPD_LP = table;
+%             AAPD_LP.P_B_L1_abs = AAPD_P(:,k_LP);
+%             AAPD_LP.P_B_L2_abs = AAPD_P(:,k_LP+1);
+%             AAPD_LP.P_B_L3_abs = AAPD_P(:,k_LP+2);
+%             AAPD_LP.Q_B_L1_abs = AAPD_Q(:,k_LP);
+%             AAPD_LP.Q_B_L2_abs = AAPD_Q(:,k_LP+1);
+%             AAPD_LP.Q_B_L3_abs = AAPD_Q(:,k_LP+2);
+%             AAPD_LP.P_L_L1_abs = zeros(nb_instants,1);
+%             AAPD_LP.P_L_L2_abs = zeros(nb_instants,1);
+%             AAPD_LP.P_L_L3_abs = zeros(nb_instants,1);
+%             AAPD_LP.Q_L_L1_abs = zeros(nb_instants,1);
+%             AAPD_LP.Q_L_L2_abs = zeros(nb_instants,1);
+%             AAPD_LP.Q_L_L3_abs = zeros(nb_instants,1);
+% 
+%             fieldname_LP = ['MP_SYNTH_AAPD_',num2str(k_LP_3)];
+%             DB_synth_AAPD.(fieldname_LP) = AAPD_LP;
+%         end
     case 'PLC_Tool'
         k_LP_3 = 0;
         for k_LP = 1 : nb_LPs

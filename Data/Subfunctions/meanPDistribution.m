@@ -1,6 +1,6 @@
 function Dist_List = meanPDistribution(SinInfo,scada_list,scada_DB,LP_DB,type)
 %
-%
+%   Function OUT!
 %
 % Author(s): P.Gassler
 

@@ -86,8 +86,6 @@ function status = Mat2Sin_LPCalc(Fig)
 
 %% TODO: Temporary
 
-close all;
-load('temp_Fig.mat')
 Fig1 = figure(findobj('type','figure','Tag','LPC_Tool'));
 Fig1.Visible = 'off';
 
@@ -122,37 +120,31 @@ Settings.PV_DB_Name                         = 'PV_database.mat';
 Settings.Output_option_del_temp_files       = false;                                   % delete all temporary simulation files after simulation is complete
 Settings.Output_option_del_temp_files_begin = true;
 Settings.Output_option_preparation          = true;
-Settings.LP_Type                            = 'SCADA';                                                          
-Settings.PV_Type                            = 'SCADA';                                                          
+Settings.LP_Type                            = 'SCADA';  % TODO (Case is no more)                                                        
+Settings.PV_Type                            = 'SCADA';  % TODO (Case is no more)                                                        
 Settings.LP_dist_type                       = 'list';                                                  
 Settings.PV_dist_type                       = 'list';                                  % Struct with all options for the outputed data
 SinName                                     = 'Wessum-Riete_Netz_170726_empty';
 
 %%
 
-Output_options  = struct;
-Output_options.U = true;
-Output_options.P = true;
-Output_options.Q = true;
-Output_options.S = true;
-Output_options.phi = true;
-Output_options.I = true;
-Output_options.P_flow = true;
-Output_options.Q_flow = true;
-Output_options.S_flow = true;
-Output_options.T_vector = true;
-Output_options.Sin_Info = true;
-Output_options.Raw = false;
-Output_options.Raw_only = false;
-Output_options.Node_Branch = true;
-Output_options.Unit = true;
-Output_options.Raw_generated = false;
-
-%%
-
-SimDetails      = struct;
-
-
+Output_options                  = struct;
+Output_options.U                = true  ;
+Output_options.P                = true  ;
+Output_options.Q                = true  ;
+Output_options.S                = true  ;
+Output_options.phi              = true  ;
+Output_options.I                = true  ;
+Output_options.P_flow           = true  ;
+Output_options.Q_flow           = true  ;
+Output_options.S_flow           = true  ;
+Output_options.T_vector         = true  ;
+Output_options.Sin_Info         = true  ;
+Output_options.Raw              = false ;
+Output_options.Raw_only         = false ;
+Output_options.Node_Branch      = true  ;
+Output_options.Unit             = true  ;
+Output_options.Raw_generated    = false ;
 
 %% Main progress bar initialisation
 
@@ -275,15 +267,13 @@ if strcmp(SinName(end-5:end),'_empty')
 else
     SinNameEmpty = [SinName,'_empty'];
 end
-% SinNameEmpty = 'Wessum-Riete_Netz_170726_empty';        % Sincal Grid Name
 SinNameBasic = SinNameEmpty(1:end-6);
-SinNameSin   = [Grid_Path,SinName,'.sin'];
-SinNameCopy  = [Sin_Path_Input,SinNameEmpty,'.sin'];
-DB_Name      = 'database';                              % DB Name
-%DB_Path      = [Grid_Path,SinNameEmpty,'_files\'];      % DB Path
-DB_Path      = [Grid_Path,SinName,'_files\'];      % DB Path
+SinNameSin   = [Grid_Path      ,SinName      ,'.sin'];
+SinNameCopy  = [Sin_Path_Input ,SinNameEmpty ,'.sin'];
+DB_Name      = 'database';                                  % DB Name
+DB_Path      = [Grid_Path,SinName,'_files\'];               % DB Path
 DB_Path_Copy = [Sin_Path_Input,SinNameEmpty,'_files\'];
-DB_Type      = '.mdb';                                  % DB Typ
+DB_Type      = '.mdb';                                      % DB Typ
 
 % Prepare the output file name
 if nargin==1
@@ -312,38 +302,29 @@ Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
 if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
-SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);            % SinInfo table
+SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);
 
 %% Load the load and photovoltaic (PV) profiles
-
 % % Waitbar Update
 % if waitbar_activ
 %     if updateWaitbar('update',main_waitbar,main_progress_2,'Loading Load and PV profiles')
 %             return
 %     end
 % end
-
-% Loading Load Profiles Database
-switch Settings.LP_Type
-    case 'SCADA'
-        disp('TODO');
+switch Settings.LP_Type     % Loading Load Profiles Database
+    case 'DB'
+        Load_Profiles = load([Settings.LP_DB_Path,Settings.LP_DB_Name]);
+        fields_LP     = fields(Load_Profiles);
+        Load_Profiles = Load_Profiles.(fields_LP{:});
     case 'AAPD'
         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
         Output_Filename = [Output_Name,'_AAPD_LP_DB.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
         save(SimData_Filename,'Load_Profiles','-v7.3');
-    case 'DB'
-        Load_Profiles = load([Settings.LP_DB_Path,Settings.LP_DB_Name]);
-        fields_LP = fields(Load_Profiles);
-        Load_Profiles = Load_Profiles.(fields_LP{:});
 end
-
-% Loading PV Profiles Database
-switch Settings.PV_Type
+switch Settings.PV_Type % Loading PV Profiles Database
     case 'DB'
         load([Settings.PV_DB_Path,Settings.PV_DB_Name],'PV___Profiles');
-    case 'SCADA'    % TODO
-        disp('TODO');
 end
 
 fields_names_LoP = fields(Load_Profiles);           % LoP - Load profiles
@@ -360,8 +341,6 @@ switch Settings.LP_dist_type
         LP2GL_Lo = alphaDistribution (SinInfo, fields_names_LoP);
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
     case 'mean_P' % TODO
-%         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'3p_reuse');
-%         LP2GL_Lo = meanPDistribution(SinInfo,[Settings.LP_dist_Path,Settings.LP_dist_list_name],Scada_DB.Load_Profiles,Load_Profiles,'1p');
 end
 writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
 
@@ -641,38 +620,31 @@ end
 %% Output preperation
 
 if Settings.Output_option_preparation
-
 %     % Waitbar Update
 %     if waitbar_activ
 %         if updateWaitbar('update',main_waitbar,main_progress_8,'Preparing Power Flow results for analysis')
 %                 return
 %         end
 %     end
-
-%     parpool('local',2);
-    for k = 1 : 2
+    for k = 1 : 2   % TODO Made it over parfor?
         if k == 1
             Output_read_NodeRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options);
         else
             Output_read_BranchRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Output_options);
         end
     end
-
 %     if Output_options.T_vector
 %         Output_Filename = [Output_Name,'_Time_Vector.mat'];
 %         SimData_Filename = [Outputs_Path,Output_Filename];
 %         save(SimData_Filename,'Time_Vector','-v7.3');
 %     end
     if Output_options.Sin_Info
-        Output_Filename = [Output_Name,'_Grid_Info.mat'];
+        Output_Filename  = [Output_Name,'_Grid_Info.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
         SinInfo_Bytes = whos('SinInfo');
         SinInfo_Bytes = SinInfo_Bytes.bytes;
-        if SinInfo_Bytes > 2 * 1024^3
-            save(SimData_Filename,'SinInfo','-v7.3');
-        else
-            save(SimData_Filename,'SinInfo');
-        end
+        if SinInfo_Bytes > 2 * 1024^3 ; save(SimData_Filename,'SinInfo','-v7.3' );
+        else                          ; save(SimData_Filename,'SinInfo'         ); end
     end
 else
 %     % Waitbar Update
@@ -681,10 +653,8 @@ else
 %                 return
 %         end
 %     end
-    files = [Sin_Path_Output,'NodeRes*'];
-    copyfile(files,Outputs_Path);
-    files = [Sin_Path_Output,'BranchRes*'];
-    copyfile(files,Outputs_Path);
+    files = [Sin_Path_Output,'NodeRes*'  ]; copyfile(files,Outputs_Path);
+    files = [Sin_Path_Output,'BranchRes*']; copyfile(files,Outputs_Path);
 end
 
 %% Save all Simulation Details (Parameters)
@@ -696,42 +666,39 @@ end
 %     end
 % end
 
-SimDetails.Grid_Name = SinNameBasic;
-SimDetails.instants_per_grid = instants_per_grid;
-SimDetails.num_grids = num_grids;
-% SimDetails.First_Moment = TimeSetup.First_Moment;
-% SimDetails.Last_Moment = TimeSetup.Last_Moment;
-% SimDetails.Time_Step = TimeSetup.Time_Step;
-% SimDetails.num_of_instants = TimeSetup.num_of_instants;
-% SimDetails.Time_Vector = Time_Vector;
-SimDetails.SinInfo = SinInfo;
-SimDetails.SinNameBasic = SinNameBasic;
-SimDetails.Output_Name = Output_Name;
-SimDetails.Outputs_Path = Outputs_Path;
-SimDetails.LoadProfiles_type = Settings.LP_Type;
-SimDetails.PVProfiles_type = Settings.PV_Type;
-SimDetails.LoadProfiles_Distrubution_method = Settings.LP_dist_type;
-SimDetails.PVProfiles_Distrubution_method = Settings.PV_dist_type;
-SimDetails.LoadProfiles_Dist_ListName_Input = Settings.LP_dist_list_name;
-SimDetails.PVProfiles_Dist_ListName_Input = Settings.PV_dist_list_name;
-SimDetails.LoadProfiles_Distribution_List = LP2GL_Lo;
-SimDetails.PVProfiles_Distribution_List = LP2GL_Pv;
-SimDetails.LoadProfiles_Database_Name = Settings.LP_DB_Name;
-SimDetails.PVProfiles_Database_Name = Settings.PV_DB_Name;
-SimDetails.Output_content = Output_options;
-SimDetails.SimType = 'PF';   %#ok The variable will just be saved
+SimDetails                                  = struct                        ;
+SimDetails.Grid_Name                        = SinNameBasic                  ;
+SimDetails.instants_per_grid                = instants_per_grid             ;
+SimDetails.num_grids                        = num_grids                     ;
+SimDetails.SinInfo                          = SinInfo                       ;
+SimDetails.SinNameBasic                     = SinNameBasic                  ;
+SimDetails.Output_Name                      = Output_Name                   ;
+SimDetails.Outputs_Path                     = Outputs_Path                  ;
+SimDetails.LoadProfiles_type                = Settings.LP_Type              ;
+SimDetails.PVProfiles_type                  = Settings.PV_Type              ;
+SimDetails.LoadProfiles_Distrubution_method = Settings.LP_dist_type         ;
+SimDetails.PVProfiles_Distrubution_method   = Settings.PV_dist_type         ;
+SimDetails.LoadProfiles_Dist_ListName_Input = Settings.LP_dist_list_name    ;
+SimDetails.PVProfiles_Dist_ListName_Input   = Settings.PV_dist_list_name    ;
+SimDetails.LoadProfiles_Distribution_List   = LP2GL_Lo                      ;
+SimDetails.PVProfiles_Distribution_List     = LP2GL_Pv                      ;
+SimDetails.LoadProfiles_Database_Name       = Settings.LP_DB_Name           ;
+SimDetails.PVProfiles_Database_Name         = Settings.PV_DB_Name           ;
+SimDetails.Output_content                   = Output_options                ;
+SimDetails.SimType                          = 'PF'                          ;
+% SimDetails.First_Moment                   = TimeSetup.First_Moment        ;
+% SimDetails.Last_Moment                    = TimeSetup.Last_Moment         ;
+% SimDetails.Time_Step                      = TimeSetup.Time_Step           ;
+% SimDetails.num_of_instants                = TimeSetup.num_of_instants     ;
+% SimDetails.Time_Vector                    = Time_Vector                   ;
 
-Output_Filename = [Output_Name,'_Simulation_Details.mat'];
-SimData_Filename = [Outputs_Path,Output_Filename];
+Output_Filename  = [Output_Name,'_Simulation_Details.mat'];
+SimData_Filename = [Outputs_Path,Output_Filename];          % TODO: What is this? 
 
 SimDetails_Bytes = whos('SimDetails');
 SimDetails_Bytes = SimDetails_Bytes.bytes;
-if SimDetails_Bytes > 2 * 1024^3
-    save(SimData_Filename,'SimDetails','-v7.3');
-else
-    save(SimData_Filename,'SimDetails');
-end
-
+if   SimDetails_Bytes > 2 * 1024^3; save(SimDetails,'SimDetails','-v7.3');
+else                              ; save(SimDetails,'SimDetails')        ; end
 
 %% Delete all temporary simulation files
 
