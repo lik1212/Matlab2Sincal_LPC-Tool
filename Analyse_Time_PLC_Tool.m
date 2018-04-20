@@ -8,7 +8,6 @@ Inputs.LP_dist_type = 'random';
 Inputs.PV_dist_type = 'list';
 Inputs.Output_option_raw = false;
 Inputs.Output_option_del_temp_files = true;
-Inputs.Output_option_del_temp_files_begin = true;
 Inputs.Output_option_preparation = true;
 Inputs.Output_option_per_node_branch = true;
 Inputs.Output_option_per_unit = true;

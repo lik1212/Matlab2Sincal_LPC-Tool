@@ -39,25 +39,6 @@ f.Inputs.LP_dist_path   = [pwd,'\Inputs\Profiles_Distribution\' ];
 f.Inputs.PV_dist_path   = [pwd,'\Inputs\Profiles_Distribution\' ];
 f.Inputs.PV_DB_Path     = [pwd,'\Inputs\PV_Profiles\'           ];
 
-f.Inputs.Output_option_raw                  = false;
-f.Inputs.Output_option_raw_only             = false;
-f.Inputs.Output_option_del_temp_files       = true ;
-f.Inputs.Output_option_del_temp_files_begin = true ;
-f.Inputs.Output_option_preparation          = true ;
-f.Inputs.Output_option_per_node_branch      = true ;
-f.Inputs.Output_option_per_unit             = true ;
-f.Inputs.Output_option_U                    = true ;
-f.Inputs.Output_option_P                    = true ;
-f.Inputs.Output_option_Q                    = true ;
-f.Inputs.Output_option_S                    = true ;
-f.Inputs.Output_option_phi                  = true ;
-f.Inputs.Output_option_I                    = true ;
-f.Inputs.Output_option_P_flow               = true ;
-f.Inputs.Output_option_Q_flow               = true ;
-f.Inputs.Output_option_S_flow               = true ;
-f.Inputs.Output_option_T_vector             = true ;
-f.Inputs.Output_option_Sin_Info             = true ;
-
 % TODO: No function yet.
 % f.Inputs.TimeSetup_First_Moment    = datetime('01.01.2015 00:00:00', 'Format', 'dd.MM.yyyy HH:mm:ss');
 % f.Inputs.TimeSetup_Last_Moment     = datetime('31.12.2015 23:50:00', 'Format', 'dd.MM.yyyy HH:mm:ss');

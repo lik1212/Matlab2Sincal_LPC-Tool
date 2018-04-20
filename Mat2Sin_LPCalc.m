@@ -37,7 +37,6 @@ function status = Mat2Sin_LPCalc(Inputs)
 %                           Inputs.Output_option_per_node_branch
 %                           Inputs.Output_option_per_unit
 %                           Inputs.Output_option_del_temp_files
-%                           Inputs.Output_option_del_temp_files_begin
 %                           Inputs.Output_option_preparation
 %                           Inputs.Output_option_U
 %                           Inputs.Output_option_P
@@ -87,14 +86,6 @@ function status = Mat2Sin_LPCalc(Inputs)
 % the German Federal Ministry of Economic Affairs and Energy as part of the
 % 6th Energy Research Programme of the German Federal Government.
 
-%% TODO: Temporary
-
-% Fig1 = figure(findobj('type','figure','Tag','LPC_Tool'));
-% Fig1.Visible = 'off';
-
-%% Read out Inputs
-
-% clear Fig; disp('Temp');          % TODO -> has to work in the furute without Fig!!!
 
 %% Default Path definition and directory preparation (TODO)
 
@@ -183,11 +174,9 @@ TimeSetup = struct;
 
 %% Delete all the simulation files at the beginning
 
-if Settings.Output_option_del_temp_files_begin  % TODO: this has to be add as a checkbox in the GUI
-    if isfolder(Sin_Path_Input ); rmdir(Sin_Path_Input, 's'); end           % delete input  Files
-    if isfolder(Sin_Path_Output); rmdir(Sin_Path_Output,'s'); end           % delete output Files   
-    if isfolder(Sin_Path_Grids ); rmdir(Sin_Path_Grids, 's'); end           % delete grids  Files
-end
+if isfolder(Sin_Path_Input ); rmdir(Sin_Path_Input, 's'); end           % delete input  Files
+if isfolder(Sin_Path_Output); rmdir(Sin_Path_Output,'s'); end           % delete output Files
+if isfolder(Sin_Path_Grids ); rmdir(Sin_Path_Grids, 's'); end           % delete grids  Files
 
 %% Load static input (e.q. column names in a database)
 
