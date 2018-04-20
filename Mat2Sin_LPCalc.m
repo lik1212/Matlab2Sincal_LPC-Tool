@@ -1,4 +1,4 @@
-function status = Mat2Sin_LPCalc(Fig)
+function status = Mat2Sin_LPCalc(Inputs)
 %% Mat2Sin_LPCalc
 %   
 %   Mat2Sin_LPCalc      - This script demonstrates the work of the load
@@ -11,11 +11,11 @@ function status = Mat2Sin_LPCalc(Fig)
 %                         smaller profiles if the load flow results 
 %                         exceed 2GB.
 %
-%   Fig.Inputs (Optional)   Structure with all necessary inputs
+%   Inputs (Optional)   Structure with all necessary inputs
 %                           Inputs.Grid_Path
 %                           Inputs.Grid_Name
-%                           Inputs.LP_Type
-%                           Inputs.PV_Type
+%                           Inputs.LP_DB_Type
+%                           Inputs.PV_DB_Type
 %                           Inputs.LP_DB_Path
 %                           Inputs.LP_DB_Name
 %                           Inputs.PV_DB_Path
@@ -55,6 +55,9 @@ function status = Mat2Sin_LPCalc(Fig)
 %                           Inputs.Data_Path
 %                           Inputs.Inputs_Path
 %                           Inputs.Outputs_Path
+%                           Inputs.VerSincal
+%                           Inputs.ParrallelCom
+%                           Inputs.NumelCores               (optional)
 %   Flowchart:
 %
 %                   1. Clear start
@@ -86,47 +89,60 @@ function status = Mat2Sin_LPCalc(Fig)
 
 %% TODO: Temporary
 
-Fig1 = figure(findobj('type','figure','Tag','LPC_Tool'));
-Fig1.Visible = 'off';
+% Fig1 = figure(findobj('type','figure','Tag','LPC_Tool'));
+% Fig1.Visible = 'off';
 
 %% Read out Inputs
 
-Inputs  = Fig.Inputs;
 % clear Fig; disp('Temp');          % TODO -> has to work in the furute without Fig!!!
 
 %% Default Path definition and directory preparation (TODO)
 
-addpath                  ([cd,         '\data\Subfunctions' ]); % Add Subfunction path
-addpath                  ([cd,         '\data\Static_Input' ]); % Add path for static input (e.q. column names in a database)
-Inputs_Path             = [cd,         '\Inputs\'           ];  % Path for the simulation's input  files 
-Outputs_Path            = [cd,         '\Outputs\'          ];  % Path for the simulation's output files
-Sin_Path_Data           = [cd,         '\Data\'             ];  % Path for the simulation's data   files
-Grid_Path               = [Inputs_Path,'Grids\'             ];  % Path for input Sincal Grids
-Sin_Path                = [cd,         '\Temp\'             ];  % Path for Sincal Simulation files
+addpath                  ([pwd,         '\data\Subfunctions' ]); % Add Subfunction path
+addpath                  ([pwd,         '\data\Static_Input' ]); % Add path for static input (e.q. column names in a database)
+Sin_Path                = [pwd,         '\Temp\'             ];  % Path for Sincal Simulation files
 Sin_Path_Input          = [Sin_Path,   'InputFiles\'        ];  % Path for Sincal Temp Input Files
 Sin_Path_Output         = [Sin_Path,   'OutputFiles\'       ];  % Path for Sincal Temp Output Files
 Sin_Path_Grids          = [Sin_Path,   'Grids\'             ];  % Path for Sincal Temp copies of Grids
+Sim_Path_Data           = [pwd,'\Data\Static_Input\'];     % Path for the simulation's data   files
 
-%% Default setting
+%% 
 
-Settings = struct;
-Settings.LP_DB_Path                         = [Inputs_Path,'Load_Profiles\'         ]; % Path for load profiles
-Settings.PV_DB_Path                         = [Inputs_Path,'PV_Profiles\'           ]; % Path for PV profiles
-Settings.LP_dist_Path                       = [Inputs_Path,'Profiles_Distribution\' ]; % Path for the L.P. distribution file
-Settings.PV_dist_Path                       = [Inputs_Path,'Profiles_Distribution\' ]; % Path for the PV.P. distribution file
-Settings.PV_dist_list_name                  = 'DCInfeederNameOriginal.txt';
-Settings.LP_DB_Name                         = 'LP_database.mat';
-Settings.PV_DB_Name                         = 'PV_database.mat';
-Settings.Output_option_del_temp_files       = false;                                   % delete all temporary simulation files after simulation is complete
-Settings.Output_option_del_temp_files_begin = true;
-Settings.Output_option_preparation          = true;
-Settings.LP_Type                            = 'SCADA';  % TODO (Case is no more)                                                        
-Settings.PV_Type                            = 'SCADA';  % TODO (Case is no more)                                                        
-Settings.LP_dist_type                       = 'list';                                                  
-Settings.PV_dist_type                       = 'list';                                  % Struct with all options for the outputed data
-SinName                                     = 'Wessum-Riete_Netz_170726_empty';
+Outputs_Path            = Inputs.Outputs_Path;  % Path for the simulation's output files
+Grid_Path               = Inputs.Grid_Path;     % Path for input Sincal Grids
+Grid_Name               = Inputs.Grid_Name;     % Grid name of Sincal Grid
 
-%%
+%% Default setting: Struct with all options for the outputed data
+
+% Settings = struct;
+% Settings.LP_DB_Path         = [Inputs_Path,'Load_Profiles\'         ]   ; % Path for load profiles
+% Settings.LP_DB_Name         = 'IEEE_Lo_Profiles.mat'                    ;
+% Settings.LP_DB_Type         = 'DB'                                      ;
+% 
+% Settings.LP_dist_path       = [Inputs_Path,'Profiles_Distribution\' ]   ; % Path for the L.P. distribution file    
+% Settings.LP_dist_list_name  = 'LoadName_IEEE_LV_Profiles.txt'           ; 
+% Settings.LP_dist_type       = 'list'                                    ;
+% 
+% Settings.PV_DB_Path         = [Inputs_Path,'PV_Profiles\'           ]   ; % Path for PV profiles
+% Settings.PV_DB_Name         = 'IEEE_PV_Profiles.mat'                    ;
+% Settings.PV_DB_Type         = 'DB'                                      ;
+% 
+% Settings.PV_dist_path       = [Inputs_Path,'Profiles_Distribution\' ]   ; % Path for the PV.P. distribution file
+% Settings.PV_dist_list_name  = 'DCInfeederName_IEEE_LV_Profiles.txt'     ;
+% Settings.PV_dist_type       = 'list'                                    ;
+% 
+% Settings.Output_option_del_temp_files       = false;	% delete all temporary simulation files after simulation is complete
+% Settings.Output_option_del_temp_files_begin = true;     % TODO, see comment later
+% Settings.Output_option_preparation          = true;
+% 
+% Settings.Grid_Path = [Inputs_Path, 'Grids\'];
+% Settings.Grid_Name = 'IEEE_LV_EU_TestFeeder';
+% 
+% Settings.VerSincal      = 13  ;
+% Settings.ParrallelCom   = true;
+% Settings.NumelCores     = 3   ;
+
+%% Default
 
 Output_options                  = struct;
 Output_options.U                = true  ;
@@ -192,22 +208,9 @@ TimeSetup = struct;
 % Options, Paths and Names are been overwritten with Inputs values if some
 % exists
 
-if nargin == 1
-    if isfield(Inputs,'Grid_Path') 
-        Grid_Path = Inputs.Grid_Path;
-        if Grid_Path(end)~='\'
-            Grid_Path = [Grid_Path,'\'];
-        end
-    end
-    if isfield(Inputs,'Grid_Name')
-        SinName = Inputs.Grid_Name;
-    end
-    if isfield(Inputs,'Output_Path')
-        Outputs_Path = Inputs.Output_Path;
-    end
-    Settings = overwritingSettings(Inputs,Settings);
-    Output_options = overwritingOptions(Inputs,Output_options);
-end
+Settings       = Inputs;
+Output_options = overwritingOptions (Inputs,Output_options);
+
 
 if ~Settings.Output_option_preparation
     Settings.Output_option_del_temp_files = false;
@@ -229,7 +232,7 @@ end
 
 %% Delete all the simulation files at the beginning
 
-if Settings.Output_option_del_temp_files_begin
+if Settings.Output_option_del_temp_files_begin  % TODO: this has to be add as a checkbox in the GUI
     if isfolder(Sin_Path_Input ); rmdir(Sin_Path_Input, 's'); end           % delete input  Files
     if isfolder(Sin_Path_Output); rmdir(Sin_Path_Output,'s'); end           % delete output Files   
     if isfolder(Sin_Path_Grids ); rmdir(Sin_Path_Grids, 's'); end           % delete grids  Files
@@ -238,8 +241,8 @@ end
 %% Load static input (e.q. column names in a database)
 
 % Column names of Table OpSer, OpSerVal, ULFNodeRes und ULFBranchRes
-load([Sin_Path_Data, 'Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          );
-load([Sin_Path_Data, 'Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       );
+load([Sim_Path_Data, 'Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          );
+load([Sim_Path_Data, 'Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       );
 % load([Sin_Path_Data, 'Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
 % load([Sin_Path_Data, 'Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
 % For some more stable in parfor: (Check why) % TODO
@@ -262,16 +265,16 @@ BranchVector = calcBranchOutputVector(Output_options);
 %     end
 % end
 
-if strcmp(SinName(end-5:end),'_empty')
-    SinNameEmpty = SinName;
+if strcmp(Grid_Name(end-5:end),'_empty')
+    SinNameEmpty = Grid_Name;
 else
-    SinNameEmpty = [SinName,'_empty'];
+    SinNameEmpty = [Grid_Name,'_empty'];
 end
 SinNameBasic = SinNameEmpty(1:end-6);
-SinNameSin   = [Grid_Path      ,SinName      ,'.sin'];
+SinNameSin   = [Grid_Path      ,Grid_Name      ,'.sin'];
 SinNameCopy  = [Sin_Path_Input ,SinNameEmpty ,'.sin'];
 DB_Name      = 'database';                                  % DB Name
-DB_Path      = [Grid_Path,SinName,'_files\'];               % DB Path
+DB_Path      = [Grid_Path,Grid_Name,'_files\'];               % DB Path
 DB_Path_Copy = [Sin_Path_Input,SinNameEmpty,'_files\'];
 DB_Type      = '.mdb';                                      % DB Typ
 
@@ -311,7 +314,7 @@ SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);
 %             return
 %     end
 % end
-switch Settings.LP_Type     % Loading Load Profiles Database
+switch Settings.LP_DB_Type     % Loading Load Profiles Database
     case 'DB'
         Load_Profiles = load([Settings.LP_DB_Path,Settings.LP_DB_Name]);
         fields_LP     = fields(Load_Profiles);
@@ -322,7 +325,7 @@ switch Settings.LP_Type     % Loading Load Profiles Database
         SimData_Filename = [Outputs_Path,Output_Filename];
         save(SimData_Filename,'Load_Profiles','-v7.3');
 end
-switch Settings.PV_Type % Loading PV Profiles Database
+switch Settings.PV_DB_Type % Loading PV Profiles Database
     case 'DB'
         load([Settings.PV_DB_Path,Settings.PV_DB_Name],'PV___Profiles');
 end
@@ -333,7 +336,7 @@ fields_names_PvP = fields(PV___Profiles);           % PvP - PV   profiles
 % Loading or Generating the distribution of the Load Profiles on the Grid Loads
 switch Settings.LP_dist_type
     case 'list'
-        LP2GL_Lo = readtable([Settings.LP_dist_Path, Settings.LP_dist_list_name],'Delimiter',';');
+        LP2GL_Lo = readtable([Settings.LP_dist_path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Lo = randomDistribution(SinInfo, fields_names_LoP);
         Settings.LP_dist_list_name = 'Load_Distribution_random.txt';
@@ -347,7 +350,7 @@ writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'D
 % Loading or Generating the distribution of the PV Profiles on the Grid PV
 switch Settings.PV_dist_type
     case 'list'
-        LP2GL_Pv     = readtable([Settings.PV_dist_Path,Settings.PV_dist_list_name],'Delimiter',';');
+        LP2GL_Pv     = readtable([Settings.PV_dist_path,Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Pv = randomDistributionPV(SinInfo,fields_names_PvP);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
@@ -387,11 +390,11 @@ clear Load_Profiles PV___Profiles k
 Needed_MemorySize = 10 + 1.5 * 10^-3 * size(SinInfo.Node,1)...
     * TimeSetup.num_of_instants; % in MB approx. In Future better!
 Max_MemorySize    = 2024; % in MB
-if Fig.Main_Win.popupmenu_NumelCores.Value * Max_MemorySize > Needed_MemorySize
+if Settings.NumelCores * Max_MemorySize > Needed_MemorySize
     TimeSetup.instants_per_grid = ...
         ceil(ceil(TimeSetup.num_of_instants/(ceil(Needed_MemorySize/...
-        (Max_MemorySize * Fig.Main_Win.popupmenu_NumelCores.Value))))/...
-        Fig.Main_Win.popupmenu_NumelCores.Value);
+        (Max_MemorySize * Settings.NumelCores))))/...
+        Settings.NumelCores);
     instants_per_grid = TimeSetup.instants_per_grid;
 else
     TimeSetup.instants_per_grid = ...
@@ -492,14 +495,14 @@ create_schema_ini('output', Sin_Path_Output, num_grids, instants_per_grid, SinNa
 %     end
 % end
 
-if Fig.Main_Win.popupmenu_ParrallelCom.Value == 1       % If i only need one Grid, is it faster to do it with one?
+if Settings.ParrallelCom == true       % If i only need one Grid, is it faster to do it with one?
     poolobj = gcp('nocreate');      % TODO
     delete(poolobj)                 % TODO
     if num_grids > 1
         poolobj = gcp('nocreate');
         if isempty(poolobj)
 %             myCluster = parcluster('local');  % TODO
-            poolsize = Fig.Main_Win.popupmenu_NumelCores.Value;
+            poolsize = Settings.NumelCores;
             if poolsize > num_grids
                 poolsize = num_grids;
             end
@@ -509,10 +512,8 @@ if Fig.Main_Win.popupmenu_ParrallelCom.Value == 1       % If i only need one Gri
         end
     else
         disp('No need for parallel computing, will be faster without.');
-        Fig.Main_Win.popupmenu_ParrallelCom.Value  = 2;
-        Fig.Main_Win.popupmenu_NumelCores.  Value  = 1; 
-        Fig.Main_Win.popupmenu_NumelCores.  Enable = 'off'; 
-        drawnow;
+        Settings.ParrallelCom  = false;
+        Settings.NumelCores    = 1;
     end
 end
 
@@ -528,7 +529,7 @@ end
 % end
 
 % parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
+if Settings.ParrallelCom == false   % Not parralel
     for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
         prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input);
     end
@@ -549,7 +550,7 @@ clear Profile_DB Profile_temp
 %             return
 %     end
 % end
-if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
+if Settings.ParrallelCom == false   % Not parralel
     for k_grid = 1:num_grids % over all grids
         Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char);
     end
@@ -561,10 +562,10 @@ end
 
 %% Check Sincal Version
 
-SincalVersion = str2double(Fig.Main_Win.edit_VerSincal.String);
+SincalVersion = Settings.VerSincal;         % Problem with parfor... TODO;
 
 %% Load flow calculation with load profiles
-if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel    
+if Settings.ParrallelCom == false   % Not parralel    
     for k_grid = 1:num_grids % over all grids %1:num_grids
         StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion);
     end
@@ -593,7 +594,7 @@ end
 
 k_grid_input = 1:num_grids;
 Done_all = false(num_grids,1);
-if Fig.Main_Win.popupmenu_ParrallelCom.Value == 2   % Not parralel
+if Settings.ParrallelCom == false   % Not parralel
     for k = 1:num_grids % over all grids
         if ~Done_all(k)
             Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
@@ -674,8 +675,8 @@ SimDetails.SinInfo                          = SinInfo                       ;
 SimDetails.SinNameBasic                     = SinNameBasic                  ;
 SimDetails.Output_Name                      = Output_Name                   ;
 SimDetails.Outputs_Path                     = Outputs_Path                  ;
-SimDetails.LoadProfiles_type                = Settings.LP_Type              ;
-SimDetails.PVProfiles_type                  = Settings.PV_Type              ;
+SimDetails.LoadProfiles_type                = Settings.LP_DB_Type           ;
+SimDetails.PVProfiles_type                  = Settings.PV_DB_Type           ;
 SimDetails.LoadProfiles_Distrubution_method = Settings.LP_dist_type         ;
 SimDetails.PVProfiles_Distrubution_method   = Settings.PV_dist_type         ;
 SimDetails.LoadProfiles_Dist_ListName_Input = Settings.LP_dist_list_name    ;
@@ -685,7 +686,7 @@ SimDetails.PVProfiles_Distribution_List     = LP2GL_Pv                      ;
 SimDetails.LoadProfiles_Database_Name       = Settings.LP_DB_Name           ;
 SimDetails.PVProfiles_Database_Name         = Settings.PV_DB_Name           ;
 SimDetails.Output_content                   = Output_options                ;
-SimDetails.SimType                          = 'PF'                          ;
+SimDetails.SimType                          = 'PF'                          ; %#ok % Will be just saved
 % SimDetails.First_Moment                   = TimeSetup.First_Moment        ;
 % SimDetails.Last_Moment                    = TimeSetup.Last_Moment         ;
 % SimDetails.Time_Step                      = TimeSetup.Time_Step           ;
@@ -693,12 +694,12 @@ SimDetails.SimType                          = 'PF'                          ;
 % SimDetails.Time_Vector                    = Time_Vector                   ;
 
 Output_Filename  = [Output_Name,'_Simulation_Details.mat'];
-SimData_Filename = [Outputs_Path,Output_Filename];          % TODO: What is this? 
+SimData_Filename = [Outputs_Path,Output_Filename];
 
 SimDetails_Bytes = whos('SimDetails');
 SimDetails_Bytes = SimDetails_Bytes.bytes;
-if   SimDetails_Bytes > 2 * 1024^3; save(SimDetails,'SimDetails','-v7.3');
-else                              ; save(SimDetails,'SimDetails')        ; end
+if   SimDetails_Bytes > 2 * 1024^3; save(SimData_Filename,'SimDetails','-v7.3');
+else                              ; save(SimData_Filename,'SimDetails')        ; end
 
 %% Delete all temporary simulation files
 
