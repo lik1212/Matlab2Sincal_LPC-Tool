@@ -4,115 +4,101 @@ function Output_read_NodeRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per
 %   Author(s): P. Gassler
 %              based on code from R. Brandalik
 %              
-
 %% Import NodeRes Files in Matlab memory
-if ~Settings.Output_option_raw
-    for k_grid = 1 : num_grids
-        NodeRes_Name = [Sin_Path_Output,'NodeRes_',SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'.txt'];
-        if k_grid == 1
-            k_SimData = readtable(NodeRes_Name);
-            Node_all      = SinInfo.Node.Node_ID;
-            Node_occur    = unique(k_SimData.Node_ID);
-            Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
-            Missing_Nodes = setdiff(Node_all,Node_occur);
-            NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
-            NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
-            VarNames   = k_SimData.Properties.VariableNames;
-            NaN_Table.Properties.VariableNames = VarNames;
-            NaN_Table.ResTime = NaN_Steps;                    
-            NaN_Table.Node_ID = repmat(Node_occur,numel(Missing_Steps),1);                        
-            k_SimData     = [k_SimData; NaN_Table];                       
-            NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
-            NaN_Table.Properties.VariableNames = VarNames;                       
-            NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';          
-            NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
-            k_SimData     = [k_SimData; NaN_Table];
-            k_SimData = sortrows(k_SimData,'Node_ID','ascend');
-            k_SimData = sortrows(k_SimData,'ResTime','ascend');
-            num_elements = size(k_SimData,1);
-            SimData   = array2table(zeros(...
-                num_elements*num_grids,...
-                size(k_SimData,2)));
-            SimData.Properties.VariableNames = VarNames;
-            % Data merging
-            SimData(...
-                (k_grid - 1) * num_elements + 1 : ...
-                k_grid * num_elements,...
-                :) = k_SimData;
-        else
-            k_SimData         = readtable(NodeRes_Name);
-            Node_all      = SinInfo.Node.Node_ID;
-            Node_occur     = unique(k_SimData.Node_ID);
-            Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
-            Missing_Nodes = setdiff(Node_all,Node_occur);
-            NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
-            NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
-            VarNames   = k_SimData.Properties.VariableNames;
-            NaN_Table.Properties.VariableNames = VarNames;
-            NaN_Table.ResTime = NaN_Steps;
-            NaN_Table.Node_ID = repmat(unique(k_SimData.Node_ID),numel(Missing_Steps),1);
-            k_SimData     = [k_SimData; NaN_Table];
-            NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
-            NaN_Table.Properties.VariableNames = VarNames;
-            NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';
-            NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
-            k_SimData     = [k_SimData; NaN_Table];
-            k_SimData = sortrows(k_SimData,'Node_ID','ascend');
-            k_SimData = sortrows(k_SimData,'ResTime','ascend');
-            % ResTime auf Instanz anpassen
-            k_SimData.ResTime = (k_grid-1)*instants_per_grid + (k_SimData.ResTime);
-            SimData(...
-                (k_grid - 1) * num_elements + 1 : ...
-                k_grid * num_elements,...
-                :) = k_SimData;
-        end
-    %     fprintf('Das %d. von %d NodeRes Files ist eingelesen worden.\n',k_grid,num_grids);
-        disp([NodeRes_Name,' loaded.']);
-    end
-    clear k_SimData
-    SimData = sortrows(SimData,'Node_ID','ascend');
-    SimData = sortrows(SimData,'ResTime','ascend');
-    
-    %% Saving only RAW data in a file and leaving function
-    if Settings.Output_option_raw
-        Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
-        SimData_Filename = [Save_Path,Output_Filename];
-        NodeRes_all = SimData;
-        SimData = [];
-        NodeRes_all_Bytes = whos('NodeRes_all');
-        NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
-        if NodeRes_all_Bytes > 2 * 1024^3
-            save(SimData_Filename,'NodeRes_all','-v7.3');
-        else
-            save(SimData_Filename,'NodeRes_all');
-        end
-        return
-    % Saving RAW data in a file
-    elseif Settings.Output_option_raw
-        Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
-        SimData_Filename = [Save_Path,Output_Filename];
-        NodeRes_all = SimData;
-        NodeRes_all_Bytes = whos('NodeRes_all');
-        NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
-        if NodeRes_all_Bytes > 2 * 1024^3
-            save(SimData_Filename,'NodeRes_all','-v7.3');
-        else
-            save(SimData_Filename,'NodeRes_all');
-        end
-        clear NodeRes_all;
-    end
-    
-else
-    if isfield(Settings,'Input_Filename')
-        SimData_Filename = Settings.Input_Filename;
+
+for k_grid = 1 : num_grids
+    NodeRes_Name = [Sin_Path_Output,'NodeRes_',SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'.txt'];
+    if k_grid == 1
+        k_SimData = readtable(NodeRes_Name);
+        Node_all      = SinInfo.Node.Node_ID;
+        Node_occur    = unique(k_SimData.Node_ID);
+        Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
+        Missing_Nodes = setdiff(Node_all,Node_occur);
+        NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
+        NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
+        VarNames   = k_SimData.Properties.VariableNames;
+        NaN_Table.Properties.VariableNames = VarNames;
+        NaN_Table.ResTime = NaN_Steps;
+        NaN_Table.Node_ID = repmat(Node_occur,numel(Missing_Steps),1);
+        k_SimData     = [k_SimData; NaN_Table];
+        NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
+        NaN_Table.Properties.VariableNames = VarNames;
+        NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';
+        NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
+        k_SimData     = [k_SimData; NaN_Table];
+        k_SimData = sortrows(k_SimData,'Node_ID','ascend');
+        k_SimData = sortrows(k_SimData,'ResTime','ascend');
+        num_elements = size(k_SimData,1);
+        SimData   = array2table(zeros(...
+            num_elements*num_grids,...
+            size(k_SimData,2)));
+        SimData.Properties.VariableNames = VarNames;
+        % Data merging
+        SimData(...
+            (k_grid - 1) * num_elements + 1 : ...
+            k_grid * num_elements,...
+            :) = k_SimData;
     else
-        Output_Filename = [SinNameBasic,'_NodeRes_raw.mat'];
-        SimData_Filename = [Sin_Path_Output,Output_Filename];
+        k_SimData         = readtable(NodeRes_Name);
+        Node_all      = SinInfo.Node.Node_ID;
+        Node_occur     = unique(k_SimData.Node_ID);
+        Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
+        Missing_Nodes = setdiff(Node_all,Node_occur);
+        NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
+        NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
+        VarNames   = k_SimData.Properties.VariableNames;
+        NaN_Table.Properties.VariableNames = VarNames;
+        NaN_Table.ResTime = NaN_Steps;
+        NaN_Table.Node_ID = repmat(unique(k_SimData.Node_ID),numel(Missing_Steps),1);
+        k_SimData     = [k_SimData; NaN_Table];
+        NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
+        NaN_Table.Properties.VariableNames = VarNames;
+        NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';
+        NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
+        k_SimData     = [k_SimData; NaN_Table];
+        k_SimData = sortrows(k_SimData,'Node_ID','ascend');
+        k_SimData = sortrows(k_SimData,'ResTime','ascend');
+        % ResTime auf Instanz anpassen
+        k_SimData.ResTime = (k_grid-1)*instants_per_grid + (k_SimData.ResTime);
+        SimData(...
+            (k_grid - 1) * num_elements + 1 : ...
+            k_grid * num_elements,...
+            :) = k_SimData;
     end
-    load(SimData_Filename);
-    disp([SimData_Filename,' loaded.']);
-    SimData = NodeRes_all;
-    NodeRes_all = [];
+    %     fprintf('Das %d. von %d NodeRes Files ist eingelesen worden.\n',k_grid,num_grids);
+    disp([NodeRes_Name,' loaded.']);
+end
+clear k_SimData
+SimData = sortrows(SimData,'Node_ID','ascend');
+SimData = sortrows(SimData,'ResTime','ascend');
+
+%% Saving only RAW data in a file and leaving function
+if Settings.Output_option_raw_only
+    Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
+    SimData_Filename = [Save_Path,Output_Filename];
+    NodeRes_all = SimData;
+    SimData = [];
+    NodeRes_all_Bytes = whos('NodeRes_all');
+    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
+    if NodeRes_all_Bytes > 2 * 1024^3
+        save(SimData_Filename,'NodeRes_all','-v7.3');
+    else
+        save(SimData_Filename,'NodeRes_all');
+    end
+    return
+    % Saving RAW data in a file
+elseif Settings.Output_option_raw
+    Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
+    SimData_Filename = [Save_Path,Output_Filename];
+    NodeRes_all = SimData;
+    NodeRes_all_Bytes = whos('NodeRes_all');
+    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
+    if NodeRes_all_Bytes > 2 * 1024^3
+        save(SimData_Filename,'NodeRes_all','-v7.3');
+    else
+        save(SimData_Filename,'NodeRes_all');
+    end
+    clear NodeRes_all;
 end
 
 %% Deleting ResTime
