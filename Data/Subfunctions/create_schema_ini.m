@@ -9,7 +9,7 @@ function create_schema_ini(type,Sin_Path,num_grids,instants_per_grid,SinNameEmpt
 %              J. Greiner
 
 
-if ~isfolder(Sin_Path); mkdir(Sin_Path); end % verify and create folder if does not exists
+% if ~isdir(Sin_Path); mkdir(Sin_Path); end % verify and create folder if does not exists
 if exist([Sin_Path,'schema.ini'],'file'); delete([Sin_Path,'schema.ini']); end % delete old schema.ini file if exist
 fileID = fopen([Sin_Path,'schema.ini'],'at');% create and open schema.ini file
 
