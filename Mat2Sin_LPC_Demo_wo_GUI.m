@@ -1,11 +1,6 @@
 %% Demonstration of the Load Profile Calculation Tool without GUI
 % Power flow calculation with load profiles in Sincal
 
-%% Basic path settings
-
-
-
-
 %% Input settings
 
 Inputs = struct;
@@ -26,9 +21,12 @@ Inputs.PV_dist_type       = 'random'                                   ;
 
 Inputs.VerSincal          = 13  ;
 Inputs.ParrallelCom       = true;
-Inputs.NumelCores         = 3   ;
+Inputs.NumelCores         = 10  ;
+% Inputs.waitbar_activ      = false;
 
 Inputs.Outputs_Path       = [pwd, '\Outputs\'         ]   ; % Path for load profiles
+Inputs.Output_option_raw  = true;    % TODO: Improve the correction of other flags if this is true
+% Inputs.Output_option_raw_only        = true;    % TODO: Improve the correction of other flags if this is true
 
 %% Start function
 
