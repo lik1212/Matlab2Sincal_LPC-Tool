@@ -130,81 +130,63 @@ if waitbar_activ
 end
 % Optional TODO: Integrate Waitbar in GUI figure (not working/finished)
 
-%% Setting up Time Vector and Number of Instants
+%% Setting up Time Vector
 
 % Default values
-TimeSetup = struct;
-% TimeSetup.First_Moment       = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');
-% TimeSetup.Last_Moment        = datetime('31.12.2015 23:50:00','Format','dd.MM.yyyy HH:mm:ss');
-% TimeSetup.Time_Step          = 1; % Minutes
-% TimeSetup.num_of_instants    = 1440;
-% Inputs.TimeSetup_num_of_instants = 1440; % 1440; % Temp, RB
-% TimeSetup = Setting_Time_Parameters(TimeSetup,Inputs);
+% TimeSetup = struct;
+% TimeSetup.First_Moment      = datetime('01.01.2015 00:00:00','Format','dd.MM.yyyy HH:mm:ss');
+% TimeSetup.Last_Moment       = datetime('31.12.2015 23:50:00','Format','dd.MM.yyyy HH:mm:ss');
+% TimeSetup.Time_Step         = 1; % Minutes
+% TimeSetup.num_of_instants   = 1440;
 % TimeSetup.instants_per_grid = 1440; % Temp, RB
-% Time_Vector = TimeSetup.Time_Vector;
-% number of time instants (initial all timestemps are set)
-% num_of_instants = size(Profile_DB.(fieldnames_DB{1}),1); % any field
-% number of instants per grid (keep access database below 2GB)
-% instants_per_grid = TimeSetup.instants_per_grid;
+% TimeSetup                   = Setting_Time_Parameters(TimeSetup,Inputs);
 
-%% Global variables definition and default value assignment
-% structure with all settings variables
+%% Delete temporary files if exist and set the temporary folder
 
+if isdir(Temp_Input_Path ); rmdir(Temp_Input_Path, 's'); end % delete input  Files
+if isdir(Temp_Output_Path); rmdir(Temp_Output_Path,'s'); end % delete output Files
+if isdir(Temp_Grids_Path ); rmdir(Temp_Grids_Path, 's'); end % delete grids  Files
+ 
+mkdir(Temp_Input_Path ); 
+mkdir(Temp_Output_Path);
+mkdir(Temp_Grids_Path );
 
+%% Load static input (e.q. column names of tables in sincal database)
 
-%% Delete all the simulation files at the beginning
-
-if isdir(Temp_Input_Path ); rmdir(Temp_Input_Path, 's'); end           % delete input  Files
-if isdir(Temp_Output_Path); rmdir(Temp_Output_Path,'s'); end           % delete output Files
-if isdir(Temp_Grids_Path ); rmdir(Temp_Grids_Path, 's'); end           % delete grids  Files
-
-%% Load static input (e.q. column names in a database)
-
-% Column names of Table OpSer, OpSerVal, ULFNodeRes und ULFBranchRes
-load([pwd, '\Data\Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          );
-load([pwd, '\Data\Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       );
-% load([pwd, '\Data\Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
-% load([pwd, '\Data\Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
-% For some more stable in parfor: (Check why) % TODO
-Col_Name_ULFNodeResult             = load('Col_Name_ULFNodeResult.mat');
-Col_Name_ULFNodeResult_fieldname   = fieldnames(Col_Name_ULFNodeResult);
-Col_Name_ULFNodeResult             = Col_Name_ULFNodeResult.(Col_Name_ULFNodeResult_fieldname{1});
-Col_Name_ULFBranchResult           = load('Col_Name_ULFBranchResult.mat');
-Col_Name_ULFBranchResult_fieldname = fieldnames(Col_Name_ULFBranchResult);
-Col_Name_ULFBranchResult           = Col_Name_ULFBranchResult.(Col_Name_ULFBranchResult_fieldname{1});
+% Column names of Table ULFNodeRes und ULFBranchRes
+load([pwd, '\Data\Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
+load([pwd, '\Data\Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
+% load([pwd, '\Data\Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          ); % TODO: Delete this files
+% load([pwd, '\Data\Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       ); % TODO: Delete this files
 
 NodeVector   = calcNodeOutputVector  (Settings);
 BranchVector = calcBranchOutputVector(Settings);
 
-%% Prepare the Sincal grid
-
-% Waitbar Update
-if waitbar_activ; waitbar(wb_stat(2), wb_Fig, 'Preparing Sincal Grid'); end
-
-SinNameSin   = [Grid_Path      ,Grid_Name      ,'.sin'];
-SinNameCopy  = [Temp_Input_Path ,Grid_NameEmpty ,'.sin'];
-DB_Name      = 'database';                                  % DB Name
-DB_Path      = [Grid_Path,Grid_Name,'_files\'];               % DB Path
-DB_Path_Copy = [Temp_Input_Path,Grid_NameEmpty,'_files\'];
+DB_Name      = 'database';                               	% DB Name
 DB_Type      = '.mdb';                                      % DB Typ
 
-if ~isdir(Temp_Input_Path); mkdir(Temp_Input_Path); end
-if ~isdir(Temp_Grids_Path); mkdir(Temp_Grids_Path); end
-if ~isdir(DB_Path_Copy  ); mkdir(DB_Path_Copy  ); end
+%% Prepare the Sincal grid
 
-copyfile(DB_Path   , DB_Path_Copy); % copy the sincal Grid folder with database
-copyfile(SinNameSin, SinNameCopy ); % copy the sincal file
+if waitbar_activ; waitbar(wb_stat(2), wb_Fig, 'Preparing Sincal Grid'); end % Waitbar Update
+
+GridNameMain = [Grid_Path       , Grid_Name      , '.sin'   ];
+GridNameCopy = [Temp_Input_Path , Grid_NameEmpty , '.sin'   ];
+DB__PathMain = [Grid_Path       , Grid_Name      , '_files\'];
+DB__PathCopy = [Temp_Input_Path , Grid_NameEmpty , '_files\'];
+
+copyfile(GridNameMain, GridNameCopy); % copy the sincal file
+copyfile(DB__PathMain, DB__PathCopy); % copy the sincal Grid folder with database
 
 % Delete old load profiles (if they exist)
 sql_in = {...
-    'DELETE FROM OpSer;'   ;...
-    'DELETE FROM OpSerVal;' ...
+    'DELETE FROM OpSer;'    ;...
+    'DELETE FROM OpSerVal;'  ...
     };  
-Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
+Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
 if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
-SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);
+SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);   % TODO, better position in Code
 
 %% Load the load and photovoltaic (PV) profiles
 
@@ -217,10 +199,11 @@ switch Settings.LP_DB_Type     % Loading Load Profiles Database
         fields_LP     = fields(Load_Profiles);
         Load_Profiles = Load_Profiles.(fields_LP{:});
     case 'AAPD'
-        Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
-        Output_Filename = [Grid_Name,'_AAPD_LP_DB.mat'];
-        SimData_Filename = [Outputs_Path,Output_Filename];
-        save(SimData_Filename,'Load_Profiles','-v7.3');
+        disp('TODO')
+%         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
+%         Output_Filename = [Grid_Name,'_AAPD_LP_DB.mat'];
+%         SimData_Filename = [Outputs_Path,Output_Filename];
+%         save(SimData_Filename,'Load_Profiles','-v7.3');
 end
 switch Settings.PV_DB_Type % Loading PV Profiles Database
     case 'DB'
@@ -467,18 +450,20 @@ end
 % Waitbar Update
 if waitbar_activ; waitbar(wb_stat(8), wb_Fig, 'Creating NodeRes and BranchRes files'); end
 
+Column_str_Node   = strjoin(Col_Name_ULFNodeResult  (NodeVector  ),', '); % Sql command (string) part that contains Column Names   
+Column_str_Branch = strjoin(Col_Name_ULFBranchResult(BranchVector),', '); % Sql command (string) part that contains Column Names
 k_grid_input = 1:num_grids;
 Done_all = false(num_grids,1);
 if Settings.ParrallelCom == false   % Not parralel
     for k = 1:num_grids % over all grids
         if ~Done_all(k)
-            Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Temp_Output_Path,Col_Name_ULFBranchResult,BranchVector);
+            Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path);
         end
     end
 else
     parfor k = 1:num_grids % over all grids
         if ~Done_all(k)
-            Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Temp_Output_Path,Col_Name_ULFBranchResult,BranchVector);
+            Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path);
         end
     end
 end
@@ -489,7 +474,7 @@ end
 
 for k = 1:num_grids % second try ... to improve
     if ~Done_all(k)
-        Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Temp_Output_Path,Col_Name_ULFBranchResult,BranchVector);
+        Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path);
     end
 end
 
@@ -535,7 +520,7 @@ SimDetails.Grid_Name                        = Grid_Name                  ;
 SimDetails.instants_per_grid                = instants_per_grid             ;
 SimDetails.num_grids                        = num_grids                     ;
 SimDetails.SinInfo                          = SinInfo                       ;
-SimDetails.SinNameBasic                     = Grid_Name                  ;
+SimDetails.Grid_Name                     = Grid_Name                  ;
 SimDetails.Output_Name                      = Grid_Name                   ;
 SimDetails.Outputs_Path                     = Outputs_Path                  ;
 SimDetails.LoadProfiles_type                = Settings.LP_DB_Type           ;
@@ -604,20 +589,20 @@ create_OpSer_txt   (fieldnames_DB,Sin_Path_Input,OpSer_suffix);
 create_OpSerVal_txt(Profile_temp, Sin_Path_Input,OpSer_suffix);
 end
 
-function Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char)
+function Txt2Database(Grid_Name,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Grid_Path,DB_Name,DB_Type,instants_per_grid_char)
 % Create copy of Sincal file
-SinName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-copyfile([Sin_Path_Input,SinNameEmpty,'.sin'],[Sin_Path_Grids,SinName,'.sin']);
+SinName = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+copyfile([Sin_Path_Input,SinNameEmpty,'.sin'],[Grid_Path,SinName,'.sin']);
 
 % Create copy of Sincal folder
-SinFolName = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-copyfile([Sin_Path_Input,SinNameEmpty,'_files\'],[Sin_Path_Grids,SinFolName]);
+SinFolName = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
+copyfile([Sin_Path_Input,SinNameEmpty,'_files\'],[Grid_Path,SinFolName]);
 % Adjust database.ini
-delete([Sin_Path_Grids,SinFolName,'database.ini']);
+delete([Grid_Path,SinFolName,'database.ini']);
 % create new database.ini file
-fileID = fopen([Sin_Path_Grids,SinFolName,'database.ini'],'at');
+fileID = fopen([Grid_Path,SinFolName,'database.ini'],'at');
 fprintf(fileID,'[Config]\nDisableStdDocHandling=0\n[Exclude]\n[Database]\nMODE=JET\n');
-fprintf(fileID,strrep(['FILE=',Sin_Path_Grids,SinFolName,'database.mdb'],'\','\\'));
+fprintf(fileID,strrep(['FILE=',Grid_Path,SinFolName,'database.mdb'],'\','\\'));
 fclose(fileID);
 
 % Read in OpSer and OpSerVal txt files into Access DB
@@ -625,39 +610,37 @@ OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
 % SQL-Command for reading in the OpSer txt file
 sql_in = ['INSERT INTO OpSer SELECT * ',...
     ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSer',OpSer_suffix,'.txt]'];
-Done = Matlab2Access_ExecuteSQL(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+Done = Matlab2Access_ExecuteSQL(sql_in,DB_Name,[Grid_Path,SinFolName],DB_Type);
 if ~Done; return; end
 % QL-Command for reading in the OpSerVal txt file
 sql_in = ['INSERT INTO OpSerVal SELECT * ',...
     ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSerVal',OpSer_suffix,'.txt]'];
-Done = Matlab2Access_ExecuteSQL(sql_in,DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+Done = Matlab2Access_ExecuteSQL(sql_in,DB_Name,[Grid_Path,SinFolName],DB_Type);
 if ~Done; return; end
 end
 
-function StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion)
-SinName   = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+function StartLFProfile(Grid_Name,instants_per_grid,k_grid,Grid_Path,SincalVersion)
+SinName   = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
 disp(['Starting power flow calculation of ',SinName]);
-LF_Status = Mat2Sin_StartLFProfile(SinName,Sin_Path_Grids,SincalVersion); % Calculate load flow with load profiles
+LF_Status = Mat2Sin_StartLFProfile(SinName,Grid_Path,SincalVersion); % Calculate load flow with load profiles
 disp(LF_Status);
 %     if ~strcmp('Successful',LF_Status)
 %         break;
 %     end
 end
 
-function Done_this = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector)
+function Done_this = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path)
 k_grid = k_grid_input(k);
-SinName         = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-SinFolName      = [SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
+SinName         = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
+SinFolName      = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
 name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
 table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
-Column_str = strjoin(Col_Name_ULFNodeResult(NodeVector),', ');% Sql command (string) part that contains Column Names
 % Sql command for reading from Table FROM ULFNodeResult + writing Table
 % ULFNodeResult in a .txt-file
-sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Sin_Path_Output,'].[',name_txt,'] FROM ', table_Name ];
-Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+sql_command_str = ['SELECT ' ,Column_str_Node, ' INTO [Text;HDR=YES;DATABASE=',Temp_Output_Path,'].[',name_txt,'] FROM ', table_Name ];
+Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Temp_Grids_Path,SinFolName],DB_Type);
 name_txt        = ['BranchRes_',SinName,'.txt'];
 table_Name      = 'ULFBranchResult';        % Results from ULFBranchResult
-Column_str = strjoin(Col_Name_ULFBranchResult(BranchVector),', ');% Sql command (string) part that contains Column Names
-sql_command_str = ['SELECT ' ,Column_str, ' INTO [Text;HDR=YES;DATABASE=',Sin_Path_Output,'].[',name_txt,'] FROM ', table_Name ];
-Done_this = Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Sin_Path_Grids,SinFolName],DB_Type);
+sql_command_str = ['SELECT ' ,Column_str_Branch, ' INTO [Text;HDR=YES;DATABASE=',Temp_Output_Path,'].[',name_txt,'] FROM ', table_Name ];
+Done_this = Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Temp_Grids_Path,SinFolName],DB_Type);
 end
