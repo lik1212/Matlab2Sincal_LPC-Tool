@@ -28,4 +28,7 @@ if ~isfield(Inputs,'Output_option_per_unit'             ); Settings.Output_optio
 if ~isfield(Inputs,'Output_option_Sin_Info'             ); Settings.Output_option_Sin_Info        = true  ; end
 if ~isfield(Inputs,'Output_option_del_temp_files'       ); Settings.Output_option_del_temp_files  = false ; end % delete all temporary simulation files after simulation is complete
 if ~isfield(Inputs,'Output_option_preparation'          ); Settings.Output_option_preparation     = true  ; end
+if ~isfield(Inputs,'waitbar_activ'                      ); Settings.waitbar_activ                 = true  ; end
 % if ~isfield(Inputs,'Output_option_T_vector'           ); Settings.T_vector                      = true  ; end
+
+if ~isfield(Inputs,'Temp_Sim_Path'                      ); Settings.Temp_Sim_Path = [pwd,'\Temp\']; end
