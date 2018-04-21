@@ -11,7 +11,7 @@ function status = Mat2Sin_LPCalc(Inputs)
 %                         smaller profiles if the load flow results 
 %                         exceed 2GB.
 %
-%   Inputs (Optional)   Structure with all necessary inputs
+%   Inputs                Structure with all necessary inputs
 %                           Inputs.Grid_Path
 %                           Inputs.Grid_Name
 %                           Inputs.LP_DB_Type
@@ -57,6 +57,7 @@ function status = Mat2Sin_LPCalc(Inputs)
 %                           Inputs.VerSincal
 %                           Inputs.ParrallelCom
 %                           Inputs.NumelCores               (optional)
+%                           Inputs.waitbar_activ            (optional)
 %   Flowchart:
 %
 %                   1. Clear start
@@ -86,56 +87,48 @@ function status = Mat2Sin_LPCalc(Inputs)
 % the German Federal Ministry of Economic Affairs and Energy as part of the
 % 6th Energy Research Programme of the German Federal Government.
 
+%% Default Path definition and directory preparation
 
-%% Default Path definition and directory preparation (TODO)
-
-addpath                  ([pwd,         '\data\Subfunctions' ]); % Add Subfunction path
-addpath                  ([pwd,         '\data\Static_Input' ]); % Add path for static input (e.q. column names in a database)
-Sin_Path                = [pwd,         '\Temp\'             ];  % Path for Sincal Simulation files
-Sin_Path_Input          = [Sin_Path,   'InputFiles\'        ];  % Path for Sincal Temp Input Files
-Sin_Path_Output         = [Sin_Path,   'OutputFiles\'       ];  % Path for Sincal Temp Output Files
-Sin_Path_Grids          = [Sin_Path,   'Grids\'             ];  % Path for Sincal Temp copies of Grids
-Sim_Path_Data           = [pwd,'\Data\Static_Input\'];     % Path for the simulation's data   files
+addpath([pwd, '\Data\Subfunctions']); % Add Subfunction path
+addpath([pwd, '\Data\Static_Input']); % Add path for static input (e.q. column names in a database)
 
 %% Set the settings based on the Inputs
 
 Settings = defaultSettings(Inputs);
 
-%% HMMM TODO
+%% To have smaller variables in the Code, extract some fields from Settings
 
+Outputs_Path   =  Settings.Outputs_Path       ; % Path for the simulation's output files
+Grid_Path      =  Settings.Grid_Path          ; % Path for input Sincal Grids
+Grid_Name      =  Settings.Grid_Name          ; % Grid name of Sincal Grid
+Grid_NameEmpty = [Settings.Grid_Name,'_empty']; % Name of empty Sincal Grid 
+waitbar_activ  =  Settings.waitbar_activ      ; % Use waitbar yes/no
+
+%% Split the folder meant for temporary files
+
+Temp_Input_Path  = [Settings.Temp_Sim_Path, 'InputFiles\'  ];  % Path for simulation temp. Input Files
+Temp_Output_Path = [Settings.Temp_Sim_Path, 'OutputFiles\' ];  % Path for simulation temp. Output Files
+Temp_Grids_Path  = [Settings.Temp_Sim_Path, 'Grids\'       ];  % Path for simulation temp. copies of Grids
+
+%% TODO: Not clear
 
 if ~Settings.Output_option_preparation
     Settings.Output_option_del_temp_files = false;
 end
 
+%% Estimating time for waitbar
 
-%% 
+if waitbar_activ
+    wb_stat = [0; 0.01; 0.03; 0.05; 0.06; 0.07; 0.08; 0.55; 0.8; 1];
+end
 
-Outputs_Path            = Inputs.Outputs_Path;  % Path for the simulation's output files
-Grid_Path               = Inputs.Grid_Path;     % Path for input Sincal Grids
-Grid_Name               = Inputs.Grid_Name;     % Grid name of Sincal Grid
+%% Main waitbar initialisation
 
-
-%% Main progress bar initialisation
-
-% active or desactive waitbar for debugging
-% waitbar_activ = true;
-% if waitbar_activ
-%     main_waitbar = waitbar(0,'Main progress','Name','LPC Tool main progress','CreateCancelBtn',...
-%                 'setappdata(gcbf,''canceling'',1)');
-%     setappdata(main_waitbar,'canceling',0);
-%     main_progress = 0;
-%     if updateWaitbar('update',main_waitbar,main_progress,'Initialisation')
-%             return
-%     end
-% % Integrate Waitbar in GUI figure (not working/finished)
-% %     main_waitbar = waitbar(0,'Main progress','Visible','off');
-% %     child_waitbar = get(main_waitbar,'Children');
-% %     set(child_waitbar,'Parent',Fig.Main_Win.figure);
-% %     set(child_waitbar,'Units','Normalized','Position',[0.7 0.1 0.2 0.05]);  
-% % %     close(main_waitbar);
-% %     set(main_waitbar,'Visible','on');
-% end
+if waitbar_activ
+    wb_Fig = waitbar(0,'Main progress','Name','LPC Tool main progress');
+    waitbar(wb_stat(1), wb_Fig, 'Initialisation');
+end
+% Optional TODO: Integrate Waitbar in GUI figure (not working/finished)
 
 %% Setting up Time Vector and Number of Instants
 
@@ -158,33 +151,20 @@ TimeSetup = struct;
 % structure with all settings variables
 
 
-%% Estimating time for waitbar
-
-% if waitbar_activ
-%     main_progress_1 = 0.01;
-%     main_progress_2 = 0.03;
-%     main_progress_3 = 0.05;
-%     main_progress_4 = 0.06;
-%     main_progress_5 = 0.07;
-%     main_progress_6 = 0.08;
-%     main_progress_7 = 0.55;
-%     main_progress_8 = 0.8;
-%     main_progress_end = 1;
-% end
 
 %% Delete all the simulation files at the beginning
 
-if isfolder(Sin_Path_Input ); rmdir(Sin_Path_Input, 's'); end           % delete input  Files
-if isfolder(Sin_Path_Output); rmdir(Sin_Path_Output,'s'); end           % delete output Files
-if isfolder(Sin_Path_Grids ); rmdir(Sin_Path_Grids, 's'); end           % delete grids  Files
+if isdir(Temp_Input_Path ); rmdir(Temp_Input_Path, 's'); end           % delete input  Files
+if isdir(Temp_Output_Path); rmdir(Temp_Output_Path,'s'); end           % delete output Files
+if isdir(Temp_Grids_Path ); rmdir(Temp_Grids_Path, 's'); end           % delete grids  Files
 
 %% Load static input (e.q. column names in a database)
 
 % Column names of Table OpSer, OpSerVal, ULFNodeRes und ULFBranchRes
-load([Sim_Path_Data, 'Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          );
-load([Sim_Path_Data, 'Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       );
-% load([Sin_Path_Data, 'Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
-% load([Sin_Path_Data, 'Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
+load([pwd, '\Data\Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          );
+load([pwd, '\Data\Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       );
+% load([pwd, '\Data\Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
+% load([pwd, '\Data\Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
 % For some more stable in parfor: (Check why) % TODO
 Col_Name_ULFNodeResult             = load('Col_Name_ULFNodeResult.mat');
 Col_Name_ULFNodeResult_fieldname   = fieldnames(Col_Name_ULFNodeResult);
@@ -198,40 +178,19 @@ BranchVector = calcBranchOutputVector(Settings);
 
 %% Prepare the Sincal grid
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_1,'Preparing Sincal Grid')
-%             return
-%     end
-% end
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(2), wb_Fig, 'Preparing Sincal Grid'); end
 
-if strcmp(Grid_Name(end-5:end),'_empty')
-    SinNameEmpty = Grid_Name;
-else
-    SinNameEmpty = [Grid_Name,'_empty'];
-end
-SinNameBasic = SinNameEmpty(1:end-6);
 SinNameSin   = [Grid_Path      ,Grid_Name      ,'.sin'];
-SinNameCopy  = [Sin_Path_Input ,SinNameEmpty ,'.sin'];
+SinNameCopy  = [Temp_Input_Path ,Grid_NameEmpty ,'.sin'];
 DB_Name      = 'database';                                  % DB Name
 DB_Path      = [Grid_Path,Grid_Name,'_files\'];               % DB Path
-DB_Path_Copy = [Sin_Path_Input,SinNameEmpty,'_files\'];
+DB_Path_Copy = [Temp_Input_Path,Grid_NameEmpty,'_files\'];
 DB_Type      = '.mdb';                                      % DB Typ
 
-% Prepare the output file name
-if nargin==1
-    if ~isfield(Inputs,'Output_Name')
-        Output_Name = SinNameBasic;
-    else
-        Output_Name = Inputs.Output_Name;
-    end
-else
-    Output_Name = SinNameBasic;
-end
-
-if ~isfolder(Sin_Path_Input); mkdir(Sin_Path_Input); end
-if ~isfolder(Sin_Path_Grids); mkdir(Sin_Path_Grids); end
-if ~isfolder(DB_Path_Copy  ); mkdir(DB_Path_Copy  ); end
+if ~isdir(Temp_Input_Path); mkdir(Temp_Input_Path); end
+if ~isdir(Temp_Grids_Path); mkdir(Temp_Grids_Path); end
+if ~isdir(DB_Path_Copy  ); mkdir(DB_Path_Copy  ); end
 
 copyfile(DB_Path   , DB_Path_Copy); % copy the sincal Grid folder with database
 copyfile(SinNameSin, SinNameCopy ); % copy the sincal file
@@ -245,15 +204,13 @@ Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path_Copy, DB_Type);
 if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
-SinInfo = Mat2Sin_GetSinInfo(SinNameEmpty,Sin_Path_Input);
+SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);
 
 %% Load the load and photovoltaic (PV) profiles
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_2,'Loading Load and PV profiles')
-%             return
-%     end
-% end
+
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(3), wb_Fig, 'Loading Load and PV profiles'); end
+
 switch Settings.LP_DB_Type     % Loading Load Profiles Database
     case 'DB'
         Load_Profiles = load([Settings.LP_DB_Path,Settings.LP_DB_Name]);
@@ -261,7 +218,7 @@ switch Settings.LP_DB_Type     % Loading Load Profiles Database
         Load_Profiles = Load_Profiles.(fields_LP{:});
     case 'AAPD'
         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
-        Output_Filename = [Output_Name,'_AAPD_LP_DB.mat'];
+        Output_Filename = [Grid_Name,'_AAPD_LP_DB.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
         save(SimData_Filename,'Load_Profiles','-v7.3');
 end
@@ -285,7 +242,7 @@ switch Settings.LP_dist_type
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
     case 'mean_P' % TODO
 end
-writetable(LP2GL_Lo,[Outputs_Path,Output_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
+writetable(LP2GL_Lo,[Outputs_Path,Grid_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
 
 % Loading or Generating the distribution of the PV Profiles on the Grid PV
 switch Settings.PV_dist_type
@@ -296,7 +253,7 @@ switch Settings.PV_dist_type
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
     case 'mean_P'  
 end
-writetable(LP2GL_Pv,[Outputs_Path,Output_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
+writetable(LP2GL_Pv,[Outputs_Path,Grid_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
 
 % Connect the load and PV profiles to one database 
 Profile_DB       = struct;                          % Profile_DB - Database with all profiles
@@ -359,12 +316,8 @@ LoadProfile_Info.Load_Profile_ID = reshape(1:num_of_profiles,num_of_profiles,1);
 
 %% Add Load Profiles to Sincal Database
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_3,'Adding load and PV Profiles to Sincal Grid')
-%             return
-%     end
-% end
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(4), wb_Fig, 'Adding load and PV Profiles to Sincal Grid'); end
 
 LP2GL_Lo_IDs = table;           % IDs for the load profile to grid load connection (important for Sincal)
 LP2GL_Lo_IDs.Grid_Load_ID    = zeros(size(LP2GL_Lo,1),1);% initial
@@ -383,7 +336,7 @@ for k_sql = 1 : size(LP2GL_Lo_IDs,1)
         'UPDATE Load SET DayOpSer_ID = ', num2str(LP2GL_Lo_IDs(k_sql,2)),...
         ' WHERE Element_ID = ',           num2str(LP2GL_Lo_IDs(k_sql,1))];
 end
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');  %TODO
 clear fields_names_LoP  % TODO
 
 %% Add PV Profiles to Sincal Database
@@ -405,7 +358,7 @@ for k_sql = 1 : size(LP2GL_Pv_IDs,1)
         'UPDATE DCInfeeder SET DayOpSer_ID = ', num2str(LP2GL_Pv_IDs(k_sql,2)),...
         ' WHERE Element_ID = ',                 num2str(LP2GL_Pv_IDs(k_sql,1))];
 end
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');  %TODO
+Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');  %TODO
 clear fields_names_PvP % TODO
 
 %% Sincal Setup customization in CalcParameter
@@ -419,21 +372,17 @@ sql_in = {...
     ('UPDATE CalcParameter SET LC_TimeStep  = 1'); ...
     ('UPDATE CalcParameter SET Flag_LC_Incl = 4')  ... % 1 - Store Results Completely, 4 - Only Marked
     };
-Matlab2Access_ExecuteSQL(sql_in,'database',[Sin_Path_Input,SinNameEmpty,'_files'],'.mdb');
+Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');
 
 %% Create schema.ini files
 
-create_schema_ini('input' , Sin_Path_Input , num_grids, instants_per_grid              ); % Input  File
-create_schema_ini('output', Sin_Path_Output, num_grids, instants_per_grid, SinNameEmpty); % Output File
+create_schema_ini('input' , Temp_Input_Path , num_grids, instants_per_grid              ); % Input  File
+create_schema_ini('output', Temp_Output_Path, num_grids, instants_per_grid, Grid_NameEmpty); % Output File
 
 %% Start parallel pool (for parallel computing) (TODO)
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_4,'Start Parallel Computing')
-%             return
-%     end
-% end
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(5), wb_Fig, 'Start Parallel Computing'); end
 
 if Settings.ParrallelCom == true       % If i only need one Grid, is it faster to do it with one?
     poolobj = gcp('nocreate');      % TODO
@@ -461,42 +410,33 @@ end
 % For parallel computing the memory must be kept low, for this reason the
 % load profiles need to be adjusted.
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_5,'Create ObSer und ObSerVal')
-%             return
-%     end
-% end
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(6), wb_Fig, 'Create ObSer und ObSerVal'); end
 
 % parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
 if Settings.ParrallelCom == false   % Not parralel
     for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input);
+        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Temp_Input_Path);
     end
 else    % Parralel
     parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input);
+        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Temp_Input_Path);
     end
 end
 % delete Profile_DB (for parallel computing the memory must be kept low)
 clear Profile_DB Profile_temp
 
 %% Txt2Database
-% num_grids = 1;
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_6,'Loading Sincal DB and performing PF calculation')
-%             return
-%     end
-% end
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(7), wb_Fig, 'Loading Sincal DB and performing PF calculation'); end
 if Settings.ParrallelCom == false   % Not parralel
     for k_grid = 1:num_grids % over all grids
-        Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char);
+        Txt2Database(Grid_Name,instants_per_grid,k_grid,Temp_Input_Path,Grid_NameEmpty,Temp_Grids_Path,DB_Name,DB_Type,instants_per_grid_char);
     end
 else
     parfor k_grid = 1:num_grids % over all grids
-        Txt2Database(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Sin_Path_Grids,DB_Name,DB_Type,instants_per_grid_char);
+        Txt2Database(Grid_Name,instants_per_grid,k_grid,Temp_Input_Path,Grid_NameEmpty,Temp_Grids_Path,DB_Name,DB_Type,instants_per_grid_char);
     end
 end
 
@@ -507,11 +447,11 @@ SincalVersion = Settings.VerSincal;         % Problem with parfor... TODO;
 %% Load flow calculation with load profiles
 if Settings.ParrallelCom == false   % Not parralel    
     for k_grid = 1:num_grids % over all grids %1:num_grids
-        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion);
+        StartLFProfile(Grid_Name,instants_per_grid,k_grid,Temp_Grids_Path,SincalVersion);
     end
 else
     parfor k_grid = 1:num_grids % over all grids %1:num_grids
-        StartLFProfile(SinNameBasic,instants_per_grid,k_grid,Sin_Path_Grids,SincalVersion);
+        StartLFProfile(Grid_Name,instants_per_grid,k_grid,Temp_Grids_Path,SincalVersion);
     end
 end
 
@@ -524,26 +464,21 @@ end
 
 %% Database2Txt
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_7,'Creating NodeRes and BranchRes files')
-%             return
-%     end
-% end
-
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(8), wb_Fig, 'Creating NodeRes and BranchRes files'); end
 
 k_grid_input = 1:num_grids;
 Done_all = false(num_grids,1);
 if Settings.ParrallelCom == false   % Not parralel
     for k = 1:num_grids % over all grids
         if ~Done_all(k)
-            Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+            Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Temp_Output_Path,Col_Name_ULFBranchResult,BranchVector);
         end
     end
 else
     parfor k = 1:num_grids % over all grids
         if ~Done_all(k)
-            Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+            Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Temp_Output_Path,Col_Name_ULFBranchResult,BranchVector);
         end
     end
 end
@@ -554,24 +489,20 @@ end
 
 for k = 1:num_grids % second try ... to improve
     if ~Done_all(k)
-        Done_all(k) = prep_txt_output(k_grid_input,k,SinNameBasic,instants_per_grid,Sin_Path_Grids,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Sin_Path_Output,Col_Name_ULFBranchResult,BranchVector);
+        Done_all(k) = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Col_Name_ULFNodeResult,NodeVector,Temp_Output_Path,Col_Name_ULFBranchResult,BranchVector);
     end
 end
 
 %% Output preperation
 
 if Settings.Output_option_preparation
-%     % Waitbar Update
-%     if waitbar_activ
-%         if updateWaitbar('update',main_waitbar,main_progress_8,'Preparing Power Flow results for analysis')
-%                 return
-%         end
-%     end
+    % Waitbar Update
+    if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Preparing Power Flow results for analysis'); end
     for k = 1 : 2   % TODO Made it over parfor?
         if k == 1
-            Output_read_NodeRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Settings);
+            Output_read_NodeRes(Outputs_Path,Temp_Output_Path,Grid_Name,instants_per_grid,num_grids,SinInfo,Grid_Name,Settings);
         else
-            Output_read_BranchRes(Outputs_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Settings);
+            Output_read_BranchRes(Outputs_Path,Temp_Output_Path,Grid_Name,instants_per_grid,num_grids,SinInfo,Grid_Name,Settings);
         end
     end
 %     if Output_options.T_vector
@@ -580,7 +511,7 @@ if Settings.Output_option_preparation
 %         save(SimData_Filename,'Time_Vector','-v7.3');
 %     end
     if Settings.Output_option_Sin_Info
-        Output_Filename  = [Output_Name,'_Grid_Info.mat'];
+        Output_Filename  = [Grid_Name,'_Grid_Info.mat'];
         SimData_Filename = [Outputs_Path,Output_Filename];
         SinInfo_Bytes = whos('SinInfo');
         SinInfo_Bytes = SinInfo_Bytes.bytes;
@@ -588,32 +519,24 @@ if Settings.Output_option_preparation
         else                          ; save(SimData_Filename,'SinInfo'         ); end
     end
 else
-%     % Waitbar Update
-%     if waitbar_activ
-%         if updateWaitbar('update',main_waitbar,main_progress_8,'Copying NodeRes and BranchRes files')
-%                 return
-%         end
-%     end
-    files = [Sin_Path_Output,'NodeRes*'  ]; copyfile(files,Outputs_Path);
-    files = [Sin_Path_Output,'BranchRes*']; copyfile(files,Outputs_Path);
+    % Waitbar Update
+    if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Copying NodeRes and BranchRes files'); end
+    files = [Temp_Output_Path,'NodeRes*'  ]; copyfile(files,Outputs_Path);
+    files = [Temp_Output_Path,'BranchRes*']; copyfile(files,Outputs_Path);
 end
 
 %% Save all Simulation Details (Parameters)
 
-% % Waitbar Update
-% if waitbar_activ
-%     if updateWaitbar('update',main_waitbar,main_progress_8,'Saving Simulation Details')
-%             return
-%     end
-% end
+% Waitbar Update
+if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Saving Simulation Details'); end
 
 SimDetails                                  = struct                        ;
-SimDetails.Grid_Name                        = SinNameBasic                  ;
+SimDetails.Grid_Name                        = Grid_Name                  ;
 SimDetails.instants_per_grid                = instants_per_grid             ;
 SimDetails.num_grids                        = num_grids                     ;
 SimDetails.SinInfo                          = SinInfo                       ;
-SimDetails.SinNameBasic                     = SinNameBasic                  ;
-SimDetails.Output_Name                      = Output_Name                   ;
+SimDetails.SinNameBasic                     = Grid_Name                  ;
+SimDetails.Output_Name                      = Grid_Name                   ;
 SimDetails.Outputs_Path                     = Outputs_Path                  ;
 SimDetails.LoadProfiles_type                = Settings.LP_DB_Type           ;
 SimDetails.PVProfiles_type                  = Settings.PV_DB_Type           ;
@@ -633,7 +556,7 @@ SimDetails.SimType                          = 'PF'                          ; %#
 % SimDetails.num_of_instants                = TimeSetup.num_of_instants     ;
 % SimDetails.Time_Vector                    = Time_Vector                   ;
 
-Output_Filename  = [Output_Name,'_Simulation_Details.mat'];
+Output_Filename  = [Grid_Name,'_Simulation_Details.mat'];
 SimData_Filename = [Outputs_Path,Output_Filename];
 
 SimDetails_Bytes = whos('SimDetails');
@@ -644,17 +567,19 @@ else                              ; save(SimData_Filename,'SimDetails')        ;
 %% Delete all temporary simulation files
 
 if Settings.Output_option_del_temp_files    
-    rmdir(Sin_Path_Input ,'s'); % delete input  Files    
-    rmdir(Sin_Path_Output,'s'); % delete output Files    
-    rmdir(Sin_Path_Grids ,'s'); % delete grids  Files
+    rmdir(Temp_Input_Path ,'s'); % delete input  Files    
+    rmdir(Temp_Output_Path,'s'); % delete output Files    
+    rmdir(Temp_Grids_Path ,'s'); % delete grids  Files
 end
 
 %% Delete Main Waitbar and finalising simulation process
-% if waitbar_activ
-%     updateWaitbar('update',main_waitbar,main_progress_end,'Finishing');
-%     updateWaitbar('delete',main_waitbar);
-% end
+
+if waitbar_activ
+    waitbar(wb_stat(10), wb_Fig, 'Finishing');
+    delete(wb_Fig);
+end
 disp('Simulation completed');
+
 status = true;
 
 end
