@@ -216,18 +216,18 @@ switch Settings.PV_DB_Type      % Loading PV Profiles Database
         error('Unknown Database Type.');
 end
 
-fields_names_LoP = fields(Load_Profiles);           % LoP - Load profiles
-fields_names_PvP = fields(PV___Profiles);           % PvP - PV   profiles
+fields_names_LoP = fields(Load_Profiles); % LoP - Load profiles
+fields_names_PvP = fields(PV___Profiles); % PvP - PV   profiles
 
 % Loading or Generating the distribution of the Load Profiles on the Grid Loads
 switch Settings.LP_dist_type
     case 'list'
         LP2GL_Lo = readtable([Settings.LP_dist_path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP);
+        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
         Settings.LP_dist_list_name = 'Load_Distribution_random.txt'; % TODO_ Maybe bad with Settings
     case 'alphab'
-        LP2GL_Lo = alphaDistribution (SinInfo, fields_names_LoP);
+        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
     case 'mean_P'
         error('Distribution Type not yet implemented.');    % TODO: meanPDistribution();
@@ -242,7 +242,7 @@ switch Settings.PV_dist_type
     case 'list'
         LP2GL_Pv     = readtable([Settings.PV_dist_path,Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Pv = randomDistribution(SinInfo, 'DCInfeeder' ,fields_names_PvP);
+        LP2GL_Pv = randomDistribution(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.LP_dist_type);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
     case 'mean_P'
         error('Distribution Type not yet implemented.');    % TODO: meanPDistribution();
