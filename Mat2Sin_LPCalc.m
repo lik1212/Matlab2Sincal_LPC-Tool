@@ -177,7 +177,8 @@ DB__PathCopy = [Temp_Input_Path , Grid_NameEmpty , '_files\'];
 copyfile(GridNameMain, GridNameCopy); % copy the sincal file
 copyfile(DB__PathMain, DB__PathCopy); % copy the sincal Grid folder with database
 
-% Delete old load profiles (if they exist)
+% Delete old load profiles (if they exist) - TODO: Can be put latter with
+% changes in CalcParameter
 sql_in = {...
     'DELETE FROM OpSer;'    ;...
     'DELETE FROM OpSerVal;'  ...
@@ -190,24 +191,29 @@ SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);   % TODO, better p
 
 %% Load the load and photovoltaic (PV) profiles
 
-% Waitbar Update
-if waitbar_activ; waitbar(wb_stat(3), wb_Fig, 'Loading Load and PV profiles'); end
+if waitbar_activ; waitbar(wb_stat(3), wb_Fig, 'Loading Load and PV profiles'); end % Waitbar Update
 
 switch Settings.LP_DB_Type     % Loading Load Profiles Database
     case 'DB'
         Load_Profiles = load([Settings.LP_DB_Path,Settings.LP_DB_Name]);
-        fields_LP     = fields(Load_Profiles);
-        Load_Profiles = Load_Profiles.(fields_LP{:});
+        temp_field    = fields(Load_Profiles);
+        Load_Profiles = Load_Profiles.(temp_field{:});
     case 'AAPD'
-        disp('TODO')
+        error('Database Type not yet implemented.');    % TODO
 %         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
 %         Output_Filename = [Grid_Name,'_AAPD_LP_DB.mat'];
 %         SimData_Filename = [Outputs_Path,Output_Filename];
 %         save(SimData_Filename,'Load_Profiles','-v7.3');
+    otherwise
+        error('Unknown Database Type.');
 end
-switch Settings.PV_DB_Type % Loading PV Profiles Database
+switch Settings.PV_DB_Type      % Loading PV Profiles Database
     case 'DB'
-        load([Settings.PV_DB_Path,Settings.PV_DB_Name],'PV___Profiles');
+        PV___Profiles = load([Settings.PV_DB_Path,Settings.PV_DB_Name]);
+        temp_field    = fields(PV___Profiles);
+        PV___Profiles = PV___Profiles.(temp_field{:});
+    otherwise
+        error('Unknown Database Type.');
 end
 
 fields_names_LoP = fields(Load_Profiles);           % LoP - Load profiles
@@ -218,13 +224,17 @@ switch Settings.LP_dist_type
     case 'list'
         LP2GL_Lo = readtable([Settings.LP_dist_path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Lo = randomDistribution(SinInfo, fields_names_LoP);
-        Settings.LP_dist_list_name = 'Load_Distribution_random.txt';
+        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP);
+        Settings.LP_dist_list_name = 'Load_Distribution_random.txt'; % TODO_ Maybe bad with Settings
     case 'alphab'
         LP2GL_Lo = alphaDistribution (SinInfo, fields_names_LoP);
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
-    case 'mean_P' % TODO
+    case 'mean_P'
+        error('Distribution Type not yet implemented.');    % TODO: meanPDistribution();
+    otherwise
+        error('Unknown Distribution Type.');
 end
+% Save distribution list as output
 writetable(LP2GL_Lo,[Outputs_Path,Grid_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
 
 % Loading or Generating the distribution of the PV Profiles on the Grid PV
@@ -232,20 +242,22 @@ switch Settings.PV_dist_type
     case 'list'
         LP2GL_Pv     = readtable([Settings.PV_dist_path,Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Pv = randomDistributionPV(SinInfo,fields_names_PvP);
+        LP2GL_Pv = randomDistribution(SinInfo, 'DCInfeeder' ,fields_names_PvP);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
-    case 'mean_P'  
+    case 'mean_P'
+        error('Distribution Type not yet implemented.');    % TODO: meanPDistribution();
+    otherwise
+        error('Unknown Distribution Type.');
 end
+% Save distribution list as output
 writetable(LP2GL_Pv,[Outputs_Path,Grid_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
 
-% Connect the load and PV profiles to one database 
-Profile_DB       = struct;                          % Profile_DB - Database with all profiles
+%% Connect the load and PV profiles to one database 
+Profile_DB = struct;	% Profile_DB - Database with all profiles
 
 % Check if all Profiles have same number of instants
 if numel(unique([structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)])) > 1
-    disp('The number of intants in the load profiles are not same!');
-    status = false;
-    return;
+    error('The number of intants in the load profiles are not same!');
 else
     TimeSetup.num_of_instants = unique([structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)]);
 end
@@ -359,7 +371,7 @@ Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_fil
 
 %% Create schema.ini files
 
-create_schema_ini('input' , Temp_Input_Path , num_grids, instants_per_grid              ); % Input  File
+create_schema_ini('input' , Temp_Input_Path , num_grids, instants_per_grid                ); % Input  File
 create_schema_ini('output', Temp_Output_Path, num_grids, instants_per_grid, Grid_NameEmpty); % Output File
 
 %% Start parallel pool (for parallel computing) (TODO)
