@@ -169,7 +169,7 @@ BranchVector = calcBranchOutputVector(Settings);
 DB_Name      = 'database';                               	% DB Name
 DB_Type      = '.mdb';                                      % DB Typ
 
-%% Prepare the Sincal grid
+%% Prepare the a copy of sincal grid and get the Info about the grid
 
 if waitbar_activ; waitbar(wb_stat(2), wb_Fig, 'Preparing Sincal Grid'); end % Waitbar Update
 
@@ -180,15 +180,6 @@ DB__PathCopy = [Temp_Input_Path , Grid_NameEmpty , '_files\'];
 
 copyfile(GridNameMain, GridNameCopy); % copy the sincal file
 copyfile(DB__PathMain, DB__PathCopy); % copy the sincal Grid folder with database
-
-% Delete old load profiles (if they exist) - TODO: Can be put latter with
-% changes in CalcParameter
-sql_in = {...
-    'DELETE FROM OpSer;'    ;...
-    'DELETE FROM OpSerVal;'  ...
-    };  
-Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
-if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
 SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);   % TODO, maybe better position in Code
@@ -301,7 +292,7 @@ Max_MemorySize    = 2024;      % in MB per processor core
 if Settings.NumelCores * Max_MemorySize > Needed_MemorySize
     % If all calculation can be done with one run per core
     TimeSetup.instants_per_grid = ...
-        ceil(TimeSetup.num_of_instants/Settings.NumelCores);
+        ceil(TimeSetup.num_of_instants / Settings.NumelCores);
 else
     % If not all calculation can be done with one run per core
     TimeSetup.instants_per_grid = ...
@@ -316,16 +307,14 @@ end
 instants_per_grid = TimeSetup.instants_per_grid; % shorter name
 num_grids         = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
 
-%% Add an ID (Primary key) to the profiles (to the LoadProfile_Info table)
+%% Add Profile ID to the associated grid element (Load/DCInfeeder)
 
+if waitbar_activ; waitbar(wb_stat(4), wb_Fig, 'Add profile IDs to the associated grid element'); end % Waitbar Update
+
+% Add an ID (Primary key) to the profiles (to the LoadProfile_Info table)
 LoadProfile_Info = table;              	
 LoadProfile_Info.ProfileName    (:) = fieldnames(Profile_DB);
 LoadProfile_Info.Load_Profile_ID(:) = 1 : size(LoadProfile_Info,1);
-
-%% Add Profile ID to the associated grid element (Load/DCInfeeder)
-
-% Waitbar Update
-if waitbar_activ; waitbar(wb_stat(4), wb_Fig, 'Add Profile ID (DayOpSer_ID) to the associated grid element'); end
 
 for k_Type = 1 : 2
     switch k_Type
@@ -350,51 +339,42 @@ for k_Type = 1 : 2
             ' SET DayOpSer_ID = ' , num2str(LP2GE_IDs.Profile_ID(k_sql)),...
             ' WHERE Element_ID = ', num2str(LP2GE_IDs.Element_ID(k_sql))];
     end
-    Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');
+    Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
 end
 
-%% Sincal Setup customization in CalcParameter
+%% Sincal Setup in CalcParameter, OpSer and OpSerVal
 
-instants_in_LC_Duration = instants_per_grid - 1; % Update CalcParameter LC_Duration to equal the number of instans per grid
+% Update CalcParameter LC_Duration to equal the number of instans per grid
+LC_Duration = num2str(instants_per_grid - 1); 
 sql_in = {...
-    ('UPDATE CalcParameter SET LC_Duration  = NULL');...                                % delete all old values in ColumnToUpdate
-    ['UPDATE CalcParameter SET LC_Duration  = ', num2str(instants_in_LC_Duration)];...  
-    ('UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''');...
-    ('UPDATE CalcParameter SET LC_StartTime = 1'); ...
-    ('UPDATE CalcParameter SET LC_TimeStep  = 1'); ...
-    ('UPDATE CalcParameter SET Flag_LC_Incl = 4')  ... % 1 - Store Results Completely, 4 - Only Marked
+    ['UPDATE CalcParameter SET LC_Duration  = ', LC_Duration]  ;...  
+    ('UPDATE CalcParameter SET LC_StartDate = ''01.01.2014''') ;...
+    ('UPDATE CalcParameter SET LC_StartTime = 1'             ) ;...
+    ('UPDATE CalcParameter SET LC_TimeStep  = 1'             ) ;...
+    ('UPDATE CalcParameter SET Flag_LC_Incl = 4'             ) ; ... % 1 - Store Results Completely, 4 - Only Marked
+    ('DELETE FROM OpSer;'                                    ) ;...  % Delete old load profiles (if they exist) 
+    ('DELETE FROM OpSerVal;'                                 )  ...
     };
-Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');
+Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
 
 %% Create schema.ini files
 
 create_schema_ini('input' , Temp_Input_Path , num_grids, instants_per_grid                ); % Input  File
 create_schema_ini('output', Temp_Output_Path, num_grids, instants_per_grid, Grid_NameEmpty); % Output File
 
-%% Start parallel pool (for parallel computing) (TODO)
+%% Start parallel pool (for parallel computing)
 
-% Waitbar Update
-if waitbar_activ; waitbar(wb_stat(5), wb_Fig, 'Start Parallel Computing'); end
+if waitbar_activ; waitbar(wb_stat(5), wb_Fig, 'Starting parallel computing'); end % Waitbar Update
 
-if Settings.ParrallelCom == true       % If i only need one Grid, is it faster to do it with one?
-    poolobj = gcp('nocreate');      % TODO
-    delete(poolobj)                 % TODO
-    if num_grids > 1
-        poolobj = gcp('nocreate');
-        if isempty(poolobj)
-%             myCluster = parcluster('local');  % TODO
-            poolsize = Settings.NumelCores;
-            if poolsize > num_grids
-                poolsize = num_grids;
-            end
-            parpool('local',poolsize);
-        else
-%             poolsize = poolobj.NumWorkers;    % TODO
+if Settings.ParrallelCom == true && Settings.NumelCores > 1
+    poolobj = gcp('nocreate');
+    if size(poolobj,1) == 1 % If par-com is already running
+        if poolobj.NumWorkers ~= Settings.NumelCores % If numel core's wrong
+            delete(poolobj);
+            parpool('local', Settings.NumelCores);
         end
     else
-        disp('No need for parallel computing, will be faster without.');
-        Settings.ParrallelCom  = false;
-        Settings.NumelCores    = 1;
+        parpool('local', Settings.NumelCores);
     end
 end
 
@@ -578,6 +558,7 @@ status = true;
 
 end
 
+%%
 function prep_txt_input(Profile_DB,num_grids,k_grid,instants_per_grid,Sin_Path_Input)
 
 OpSer_Name = fieldnames(Profile_DB);
@@ -601,6 +582,7 @@ create_OpSer_txt   (OpSer_Name,Sin_Path_Input,OpSer_suffix);
 create_OpSerVal_txt(Profile_temp, Sin_Path_Input,OpSer_suffix);
 end
 
+%%
 function Txt2Database(Grid_Name,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Grid_Path,DB_Name,DB_Type)
 % Create copy of Sincal file
 SinName = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
@@ -623,15 +605,14 @@ OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
 % SQL-Command for reading in the OpSer txt file
 sql_in = ['INSERT INTO OpSer SELECT * ',...
     ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSer',OpSer_suffix,'.txt]'];
-Done = Matlab2Access_ExecuteSQL(sql_in,DB_Name,[Grid_Path,SinFolName],DB_Type);
-if ~Done; return; end
+Matlab2Access_ExecuteSQL(sql_in, DB_Name, [Grid_Path,SinFolName], DB_Type);
 % QL-Command for reading in the OpSerVal txt file
 sql_in = ['INSERT INTO OpSerVal SELECT * ',...
     ' FROM [Text;DATABASE=',Sin_Path_Input,'].[OpSerVal',OpSer_suffix,'.txt]'];
-Done = Matlab2Access_ExecuteSQL(sql_in,DB_Name,[Grid_Path,SinFolName],DB_Type);
-if ~Done; return; end
+Matlab2Access_ExecuteSQL(sql_in, DB_Name, [Grid_Path,SinFolName], DB_Type);
 end
 
+%%
 function StartLFProfile(Grid_Name,instants_per_grid,k_grid,Grid_Path,SincalVersion)
 SinName   = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
 disp(['Starting power flow calculation of ',SinName]);
@@ -642,6 +623,7 @@ disp(LF_Status);
 %     end
 end
 
+%%
 function Done_this = prep_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path)
 k_grid = k_grid_input(k);
 SinName         = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
@@ -655,5 +637,5 @@ Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Temp_Grids_Path,SinFolName],D
 name_txt        = ['BranchRes_',SinName,'.txt'];
 table_Name      = 'ULFBranchResult';        % Results from ULFBranchResult
 sql_command_str = ['SELECT ' ,Column_str_Branch, ' INTO [Text;HDR=YES;DATABASE=',Temp_Output_Path,'].[',name_txt,'] FROM ', table_Name ];
-Done_this = Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Temp_Grids_Path,SinFolName],DB_Type);
+Done_this = Matlab2Access_ExecuteSQL(sql_command_str, DB_Name, [Temp_Grids_Path,SinFolName], DB_Type);
 end
