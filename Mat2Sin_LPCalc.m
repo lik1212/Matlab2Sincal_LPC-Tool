@@ -125,7 +125,11 @@ end
 %% Main waitbar initialisation
 
 if waitbar_activ
-    wb_Fig = waitbar(0,'Main progress','Name','LPC Tool main progress');
+    % Check if waitbar exists
+    wb_Fig = findall(0, 'Name', 'LPC Tool main progress');
+    if isempty(wb_Fig)
+        wb_Fig = waitbar(0, 'Main progress', 'Name', 'LPC Tool main progress');
+    end
     waitbar(wb_stat(1), wb_Fig, 'Initialisation');
 end
 % Optional TODO: Integrate Waitbar in GUI figure (not working/finished)
@@ -187,7 +191,7 @@ Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
 if ~Done; return; end
 
 % Get Grind basic information (nodes,lines,loads,etc.)
-SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);   % TODO, better position in Code
+SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);   % TODO, maybe better position in Code
 
 %% Load the load and photovoltaic (PV) profiles
 
@@ -262,21 +266,24 @@ writetable(LP2GL_Pv,[Outputs_Path,Grid_Name,'_',Settings.PV_dist_list_name],'Del
 % Check if all Profiles have same number of instants
 num_steps_Profiles = [structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)];
 if numel(unique(num_steps_Profiles)) ~= 1
-    error('The number of intants in the load profiles are not same!');
+    error('The number of instants in the Profiles are not same.');
+end
+if any(ismember(fields(Load_Profiles), fields(PV___Profiles)))
+    error('Profiles for Loads and DCInfeeders are not allowed to have same name.');
 end
 TimeSetup.num_of_instants = unique(num_steps_Profiles);
 
 Profile_DB = struct;        % Profile_DB - Database with all profiles    
 for k = 1:size(LP2GL_Lo,1)  % Load Profiles
-    if ismember(             LP2GL_Lo.Load_Profile(k), fields_names_LoP)
-        Profile_DB.(['Load_',LP2GL_Lo.Load_Profile{k}]) = ...
-            Load_Profiles.(  LP2GL_Lo.Load_Profile{k})(1:TimeSetup.num_of_instants, :);
+    if ismember(           LP2GL_Lo.Load_Profile(k), fields_names_LoP)
+        Profile_DB.(       LP2GL_Lo.Load_Profile{k}) = ...
+            Load_Profiles.(LP2GL_Lo.Load_Profile{k})(1 : TimeSetup.num_of_instants, :);
     end
 end
 for k = 1:size(LP2GL_Pv,1)  % DCInfedder Profiles
-    if ismember(             LP2GL_Pv.Load_Profile(k), fields_names_PvP)
-        Profile_DB.(['PV___',LP2GL_Pv.Load_Profile{k}]) = ...
-            PV___Profiles.(  LP2GL_Pv.Load_Profile{k})(1:TimeSetup.num_of_instants, :);
+    if ismember(           LP2GL_Pv.Load_Profile(k), fields_names_PvP)
+        Profile_DB.(       LP2GL_Pv.Load_Profile{k}) = ...
+            PV___Profiles.(LP2GL_Pv.Load_Profile{k})(1 : TimeSetup.num_of_instants, :);
     end
 end
 clear Load_Profiles PV___Profiles k     % To reduce RAM usage
@@ -307,66 +314,44 @@ if TimeSetup.instants_per_grid > 365 * 24
     TimeSetup.instants_per_grid = 365 * 24;
 end
 instants_per_grid = TimeSetup.instants_per_grid; % shorter name
+num_grids         = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
 
-instants_per_grid_char = num2str(instants_per_grid);
-num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
+%% Add an ID (Primary key) to the profiles (to the LoadProfile_Info table)
 
-%% Link between load profile and load in Sincal grid % TODO, Comments anpassen
+LoadProfile_Info = table;              	
+LoadProfile_Info.ProfileName    (:) = fieldnames(Profile_DB);
+LoadProfile_Info.Load_Profile_ID(:) = 1 : size(LoadProfile_Info,1);
 
-fieldnames_DB      = fieldnames(Profile_DB);
-OpSer_Name         = cellfun(@(x) x(6:end), fieldnames_DB,'UniformOutput',0);   % Without 'Load_' or 'PV___'
-num_of_profiles    = numel(fieldnames(Profile_DB));                             % number of load*3 (phase L1, L2, L3)
-LoadProfile_Info   = table;                                                     % LoadProfile_Info table
-
-LoadProfile_Info.ProfileName     = OpSer_Name; 
-LoadProfile_Info.Load_Profile_ID = reshape(1:num_of_profiles,num_of_profiles,1);
-
-%% Add Load Profiles to Sincal Database
+%% Add Profile ID to the associated grid element (Load/DCInfeeder)
 
 % Waitbar Update
-if waitbar_activ; waitbar(wb_stat(4), wb_Fig, 'Adding load and PV Profiles to Sincal Grid'); end
+if waitbar_activ; waitbar(wb_stat(4), wb_Fig, 'Add Profile ID (DayOpSer_ID) to the associated grid element'); end
 
-LP2GL_Lo_IDs = table;           % IDs for the load profile to grid load connection (important for Sincal)
-LP2GL_Lo_IDs.Grid_Load_ID    = zeros(size(LP2GL_Lo,1),1);% initial
-LP2GL_Lo_IDs.Load_Profile_ID = zeros(size(LP2GL_Lo,1),1);
-for k_Load = 1:size(LP2GL_Lo,1)% Names -> IDs
-    LP2GL_Lo_IDs.Grid_Load_ID(k_Load)    = SinInfo.Load.Element_ID(strcmp(SinInfo.Load.Name,LP2GL_Lo{k_Load,1}));
-    LP2GL_Lo_IDs.Load_Profile_ID(k_Load) = LoadProfile_Info.Load_Profile_ID(strcmp(LoadProfile_Info.ProfileName,LP2GL_Lo{k_Load,2}));
+for k_Type = 1 : 2
+    switch k_Type
+        case 1
+            Element_Type = 'Load'      ; % For Loads
+            LP2GE_Names  = LP2GL_Lo    ;
+        case 2
+            Element_Type = 'DCInfeeder'; % For DCInfeeders (PVs)
+            LP2GE_Names  = LP2GL_Pv    ;
+    end
+    LP2GE_IDs = table; % initial table for IDs
+    LP2GE_IDs.Element_ID = zeros(size(LP2GE_Names,1), 1);
+    LP2GE_IDs.Profile_ID = zeros(size(LP2GE_Names,1), 1);
+    for k_Ele = 1 : size(LP2GE_Names, 1) % Grid Element Name -> Grid Element ID -> Profile Name -> Profile ID
+        LP2GE_IDs.Element_ID(k_Ele) = SinInfo.(Element_Type).Element_ID(strcmp(SinInfo.(Element_Type).Name , LP2GE_Names.Grid_Load   {k_Ele}));
+        LP2GE_IDs.Profile_ID(k_Ele) = LoadProfile_Info.Load_Profile_ID (strcmp(LoadProfile_Info.ProfileName, LP2GE_Names.Load_Profile{k_Ele}));
+    end
+    sql_in = {['UPDATE ', Element_Type, ' SET DayOpSer_ID = NULL']}; % delete all old values in ColumnToUpdate
+    for k_sql = 1 : size(LP2GE_IDs, 1)
+        sql_in{ 1 + k_sql, 1} = [...
+            'UPDATE '             , Element_Type                        ,...
+            ' SET DayOpSer_ID = ' , num2str(LP2GE_IDs.Profile_ID(k_sql)),...
+            ' WHERE Element_ID = ', num2str(LP2GE_IDs.Element_ID(k_sql))];
+    end
+    Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');
 end
-if istable(LP2GL_Lo_IDs)% Table2Array for value_in
-    LP2GL_Lo_IDs = table2array(LP2GL_Lo_IDs);
-end
-sql_in = {'UPDATE Load SET DayOpSer_ID = NULL'};    %delete all old values in ColumnToUpdate
-sql_offset = size(sql_in,1);
-for k_sql = 1 : size(LP2GL_Lo_IDs,1)
-    sql_in{sql_offset + k_sql,1} = [...
-        'UPDATE Load SET DayOpSer_ID = ', num2str(LP2GL_Lo_IDs(k_sql,2)),...
-        ' WHERE Element_ID = ',           num2str(LP2GL_Lo_IDs(k_sql,1))];
-end
-Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');  %TODO
-clear fields_names_LoP  % TODO
-
-%% Add PV Profiles to Sincal Database
-
-LP2GL_Pv_IDs = table; % IDs for the load profile to grid load connection (important for Sincal)
-LP2GL_Pv_IDs.Grid_Load_ID    = zeros(size(LP2GL_Pv,1),1);   % initial
-LP2GL_Pv_IDs.Load_Profile_ID = zeros(size(LP2GL_Pv,1),1);
-for k_Load = 1:size(LP2GL_Pv,1)% Names -> IDs
-    LP2GL_Pv_IDs.Grid_Load_ID(k_Load)    = SinInfo.DCInfeeder.Element_ID(strcmp(SinInfo.DCInfeeder.Name,LP2GL_Pv{k_Load,1}));
-    LP2GL_Pv_IDs.Load_Profile_ID(k_Load) = LoadProfile_Info.Load_Profile_ID(strcmp(LoadProfile_Info.ProfileName,LP2GL_Pv{k_Load,2}));
-end
-if istable(LP2GL_Pv_IDs)% Table2Array for value_in
-    LP2GL_Pv_IDs = table2array(LP2GL_Pv_IDs);
-end
-sql_in = {'UPDATE DCInfeeder SET DayOpSer_ID = NULL'}; %delete all old values in ColumnToUpdate
-sql_offset = size(sql_in,1);
-for k_sql = 1 : size(LP2GL_Pv_IDs,1)
-    sql_in{sql_offset + k_sql,1} = [...
-        'UPDATE DCInfeeder SET DayOpSer_ID = ', num2str(LP2GL_Pv_IDs(k_sql,2)),...
-        ' WHERE Element_ID = ',                 num2str(LP2GL_Pv_IDs(k_sql,1))];
-end
-Matlab2Access_ExecuteSQL(sql_in,'database',[Temp_Input_Path,Grid_NameEmpty,'_files'],'.mdb');  %TODO
-clear fields_names_PvP % TODO
 
 %% Sincal Setup customization in CalcParameter
 
@@ -422,12 +407,12 @@ if waitbar_activ; waitbar(wb_stat(6), wb_Fig, 'Create ObSer und ObSerVal'); end
 
 % parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
 if Settings.ParrallelCom == false   % Not parralel
-    for k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Temp_Input_Path);
+    for k_grid =    1 : num_grids % over all grids % parfor only for strong PC (Server)
+        prep_txt_input(Profile_DB, num_grids, k_grid, instants_per_grid, Temp_Input_Path);
     end
 else    % Parralel
-    parfor k_grid =  1:num_grids % over all grids % parfor only for strong PC (Server)
-        prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Temp_Input_Path);
+    parfor k_grid = 1 : num_grids % over all grids % parfor only for strong PC (Server)
+        prep_txt_input(Profile_DB, num_grids, k_grid, instants_per_grid, Temp_Input_Path);
     end
 end
 % delete Profile_DB (for parallel computing the memory must be kept low)
@@ -439,11 +424,11 @@ clear Profile_DB Profile_temp
 if waitbar_activ; waitbar(wb_stat(7), wb_Fig, 'Loading Sincal DB and performing PF calculation'); end
 if Settings.ParrallelCom == false   % Not parralel
     for k_grid = 1:num_grids % over all grids
-        Txt2Database(Grid_Name,instants_per_grid,k_grid,Temp_Input_Path,Grid_NameEmpty,Temp_Grids_Path,DB_Name,DB_Type,instants_per_grid_char);
+        Txt2Database(Grid_Name,instants_per_grid,k_grid,Temp_Input_Path,Grid_NameEmpty,Temp_Grids_Path,DB_Name,DB_Type);
     end
 else
     parfor k_grid = 1:num_grids % over all grids
-        Txt2Database(Grid_Name,instants_per_grid,k_grid,Temp_Input_Path,Grid_NameEmpty,Temp_Grids_Path,DB_Name,DB_Type,instants_per_grid_char);
+        Txt2Database(Grid_Name,instants_per_grid,k_grid,Temp_Input_Path,Grid_NameEmpty,Temp_Grids_Path,DB_Name,DB_Type);
     end
 end
 
@@ -593,27 +578,30 @@ status = true;
 
 end
 
-function prep_txt_input(Profile_DB,fieldnames_DB,num_grids,k_grid,instants_per_grid,instants_per_grid_char,Sin_Path_Input)
+function prep_txt_input(Profile_DB,num_grids,k_grid,instants_per_grid,Sin_Path_Input)
+
+OpSer_Name = fieldnames(Profile_DB);
 % temporary load profile
 Profile_temp = struct;
 if k_grid~=num_grids % all grids with full number of instants
-    for i_field = 1:numel(fieldnames_DB)
-        Profile_temp.(fieldnames_DB{i_field}) = ...
-            Profile_DB.(fieldnames_DB{i_field})(((k_grid-1)*instants_per_grid+1):k_grid*instants_per_grid,:);
+    for i_field = 1:numel(OpSer_Name)
+        Profile_temp.(OpSer_Name{i_field}) = ...
+            Profile_DB.(OpSer_Name{i_field})(((k_grid-1)*instants_per_grid+1):k_grid*instants_per_grid,:);
     end
 else % last grid can have a smaller number of instants
-    for i_field = 1:numel(fieldnames_DB)
-        Profile_temp.(fieldnames_DB{i_field}) = ...
-            Profile_DB.(fieldnames_DB{i_field})(((k_grid-1)*instants_per_grid+1):end,:);
+    for i_field = 1:numel(OpSer_Name)
+        Profile_temp.(OpSer_Name{i_field}) = ...
+            Profile_DB.(OpSer_Name{i_field})(((k_grid-1)*instants_per_grid+1):end,:);
     end
 end
 % Create OpSerVal txt files
+instants_per_grid_char = num2str(instants_per_grid);
 OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
-create_OpSer_txt   (fieldnames_DB,Sin_Path_Input,OpSer_suffix);
+create_OpSer_txt   (OpSer_Name,Sin_Path_Input,OpSer_suffix);
 create_OpSerVal_txt(Profile_temp, Sin_Path_Input,OpSer_suffix);
 end
 
-function Txt2Database(Grid_Name,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Grid_Path,DB_Name,DB_Type,instants_per_grid_char)
+function Txt2Database(Grid_Name,instants_per_grid,k_grid,Sin_Path_Input,SinNameEmpty,Grid_Path,DB_Name,DB_Type)
 % Create copy of Sincal file
 SinName = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
 copyfile([Sin_Path_Input,SinNameEmpty,'.sin'],[Grid_Path,SinName,'.sin']);
@@ -629,6 +617,7 @@ fprintf(fileID,'[Config]\nDisableStdDocHandling=0\n[Exclude]\n[Database]\nMODE=J
 fprintf(fileID,strrep(['FILE=',Grid_Path,SinFolName,'database.mdb'],'\','\\'));
 fclose(fileID);
 
+instants_per_grid_char = num2str(instants_per_grid);
 % Read in OpSer and OpSerVal txt files into Access DB
 OpSer_suffix = ['_',instants_per_grid_char,'inst_',num2str(k_grid)];
 % SQL-Command for reading in the OpSer txt file
