@@ -28,7 +28,7 @@ open_comm = ['Provider=' provider ';Data Source=' DB_Path DB_Name DB_Type]; % Sq
 Done      = false;
 max_tries = 10;
 k_try     = 1 ;
-while Done == false && k_try < max_tries
+while Done == false && k_try <= max_tries
     try
         srv = actxserver('ADODB.connection'  );             % Create a local OLE Automation server "srv" for starting the Access process
         invoke(srv,'Open'        , open_comm );             % Open the connection with the Access Database
@@ -43,10 +43,9 @@ while Done == false && k_try < max_tries
         fprintf(['Execution try ',num2str(k_try),' in ',DB_Name,' successful.\n']);
     catch
         fprintf(['Execution try ',num2str(k_try),'/',num2str(max_tries),' in ',DB_Name,' was not successful.\n']);
-        k_try = k_try + 1;
         if k_try == max_tries
-            fprintf(['Connection with ',DB_Name,' could not be created. Programm will stop.\n']);
-            return;
+            error(['Connection with ',DB_Name,' could not be created.']);
         end
+        k_try = k_try + 1;
     end
 end
