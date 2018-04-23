@@ -1,5 +1,5 @@
 function status = Mat2Sin_LPCalc(Inputs)
-%% Mat2Sin_LPCalc
+%% Mat2Sin_LPCalc (TODO: adjust Input list)
 %   
 %   Mat2Sin_LPCalc      - This script demonstrates the work of the load
 %                         flow calculation for load profiles (load flow 
@@ -130,7 +130,7 @@ if waitbar_activ
 end
 % Optional TODO: Integrate Waitbar in GUI figure (not working/finished)
 
-%% Setting up Time Vector
+%% Setting up Time Vector (TODO)
 
 % Default values
 % TimeSetup = struct;
@@ -225,7 +225,7 @@ switch Settings.LP_dist_type
         LP2GL_Lo = readtable([Settings.LP_dist_path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
-        Settings.LP_dist_list_name = 'Load_Distribution_random.txt'; % TODO_ Maybe bad with Settings
+        Settings.LP_dist_list_name = 'Load_Distribution_random.txt';
     case 'alphab'
         LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
@@ -244,7 +244,7 @@ switch Settings.PV_dist_type
         LP2GL_Pv     = readtable([Settings.PV_dist_path,Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
-        Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
+        Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';
     case 'alphab'
         LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_alphabetical_order.txt';
@@ -257,50 +257,57 @@ end
 % Save distribution list as output
 writetable(LP2GL_Pv,[Outputs_Path,Grid_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
 
-%% Connect the load and PV profiles to one database 
-Profile_DB = struct;	% Profile_DB - Database with all profiles
+%% Connect the load and PV profiles to one profile database 
 
 % Check if all Profiles have same number of instants
-if numel(unique([structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)])) > 1
+num_steps_Profiles = [structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)];
+if numel(unique(num_steps_Profiles)) ~= 1
     error('The number of intants in the load profiles are not same!');
-else
-    TimeSetup.num_of_instants = unique([structfun(@(x) size(x,1),Load_Profiles);structfun(@(x) size(x,1),PV___Profiles)]);
 end
-    
-for k = 1:size(LP2GL_Lo,1)
-    if ismember(             LP2GL_Lo.Load_Profile(k),fields_names_LoP)
+TimeSetup.num_of_instants = unique(num_steps_Profiles);
+
+Profile_DB = struct;        % Profile_DB - Database with all profiles    
+for k = 1:size(LP2GL_Lo,1)  % Load Profiles
+    if ismember(             LP2GL_Lo.Load_Profile(k), fields_names_LoP)
         Profile_DB.(['Load_',LP2GL_Lo.Load_Profile{k}]) = ...
-            Load_Profiles.(  LP2GL_Lo.Load_Profile{k})(1:TimeSetup.num_of_instants,:);
+            Load_Profiles.(  LP2GL_Lo.Load_Profile{k})(1:TimeSetup.num_of_instants, :);
     end
 end
-for k = 1:size(LP2GL_Pv,1)
-    if ismember(             LP2GL_Pv.Load_Profile(k),fields_names_PvP)
+for k = 1:size(LP2GL_Pv,1)  % DCInfedder Profiles
+    if ismember(             LP2GL_Pv.Load_Profile(k), fields_names_PvP)
         Profile_DB.(['PV___',LP2GL_Pv.Load_Profile{k}]) = ...
-            PV___Profiles.(  LP2GL_Pv.Load_Profile{k})(1:TimeSetup.num_of_instants,:);
+            PV___Profiles.(  LP2GL_Pv.Load_Profile{k})(1:TimeSetup.num_of_instants, :);
     end
 end
-% clear Load_Profiles PV___Profiles fields_names_LoP fields_names_PvP k
-clear Load_Profiles PV___Profiles k
+clear Load_Profiles PV___Profiles k     % To reduce RAM usage
 
-%% Set instanst number because Access Database has maximum of 2 GB
+%% Set instants_per_grid number 
 
-Needed_MemorySize = 10 + 1.5 * 10^-3 * size(SinInfo.Node,1)...
-    * TimeSetup.num_of_instants; % in MB approx. In Future better!
-Max_MemorySize    = 2024; % in MB
+% They are two reasons for calculating on more than one grid, one is that
+% the maximum memory of an Access Database is 2 GB, the other is the option
+% to calculate with more than one processor core (be faster).
+
+% Check approximate memory for all timesteps (TODO: maybe a better approx.)
+Needed_MemorySize = 10 + 1.5 * 10^-3 * size(SinInfo.Node,1) * ...
+    TimeSetup.num_of_instants; % in MB
+Max_MemorySize    = 2024;      % in MB per processor core
 if Settings.NumelCores * Max_MemorySize > Needed_MemorySize
+    % If all calculation can be done with one run per core
     TimeSetup.instants_per_grid = ...
-        ceil(ceil(TimeSetup.num_of_instants/(ceil(Needed_MemorySize/...
-        (Max_MemorySize * Settings.NumelCores))))/...
-        Settings.NumelCores);
-    instants_per_grid = TimeSetup.instants_per_grid;
+        ceil(TimeSetup.num_of_instants/Settings.NumelCores);
 else
+    % If not all calculation can be done with one run per core
     TimeSetup.instants_per_grid = ...
-        ceil(TimeSetup.num_of_instants/(ceil(Needed_MemorySize/Max_MemorySize)));
-    instants_per_grid = TimeSetup.instants_per_grid;
+        ceil(TimeSetup.num_of_instants/(         ...
+        ceil(Needed_MemorySize / Max_MemorySize) ... % Total number of runs
+        ));
 end
-if instants_per_grid > 365 * 24
-    instants_per_grid = 365 * 24;
+% Maximum instans per a Sincal grid is 8760 (365 days * 24 hour)
+if TimeSetup.instants_per_grid > 365 * 24
+    TimeSetup.instants_per_grid = 365 * 24;
 end
+instants_per_grid = TimeSetup.instants_per_grid; % shorter name
+
 instants_per_grid_char = num2str(instants_per_grid);
 num_grids = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
 
