@@ -1,6 +1,6 @@
-function Dist_List = randomDistribution(SinInfo, ElementType ,Profiles_Names, dist_type)
-%
-%   Distribution List randomly sorted
+function Dist_List = create_DistributionList(SinInfo, ElementType ,Profiles_Names, dist_type)
+%create_DistributionList - Create the distribution list of profiles to grid
+%load or DCInfeeders.
 %
 % Author(s): P. Gassler, R. Brandalik
 
