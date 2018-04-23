@@ -20,6 +20,7 @@ if isfield(SinInfo, ElementType) && num_Profiles > 0
         % If less profiles than grids loads occur repeat the profiles
         mult_Profiles_Names = ceil(num_Grid_Loads/num_Profiles);
         Profiles_Names      = repmat(Profiles_Names, mult_Profiles_Names, 1);
+        num_Profiles        = numel (Profiles_Names); % Correct number of profiles     
     end
     switch dist_type
         case 'random'   % Randomly sorted
