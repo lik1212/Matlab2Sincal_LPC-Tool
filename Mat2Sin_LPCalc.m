@@ -224,13 +224,13 @@ switch Settings.LP_dist_type
     case 'list'
         LP2GL_Lo = readtable([Settings.LP_dist_path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
+        LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
         Settings.LP_dist_list_name = 'Load_Distribution_random.txt'; % TODO_ Maybe bad with Settings
     case 'alphab'
-        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
+        LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
         Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
     case 'DB_order'
-        LP2GL_Lo = randomDistribution(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
+        LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
         Settings.LP_dist_list_name = 'Load_Distribution_database_order.txt';
     otherwise
         error('Unknown Distribution Type.');
@@ -243,13 +243,13 @@ switch Settings.PV_dist_type
     case 'list'
         LP2GL_Pv     = readtable([Settings.PV_dist_path,Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
-        LP2GL_Pv = randomDistribution(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
+        LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';   % TODO
     case 'alphab'
-        LP2GL_Pv = randomDistribution(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
+        LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_alphabetical_order.txt';
     case 'DB_order'
-        LP2GL_Pv = randomDistribution(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
+        LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
         Settings.PV_dist_list_name = 'DCInfeeder_Distribution_database_order.txt';
     otherwise
         error('Unknown Distribution Type.');
