@@ -1,5 +1,5 @@
-function LF_Status = Mat2Sin_StartLFProfile(Sin_Name,Sin_Path,SincalVersion)
-% Mat2Sin_StartLF - Start Load-flow in Sincal
+function Mat2Sin_StartLFProfile(Sin_Name, Sin_Path, SincalVersion)
+%Mat2Sin_StartLFProfile - Start Load-flow with profiles in Sincal
 %
 %   LF_Status = Mat2Sin_StartLF(Sin_Name,Sin_Path)
 %
@@ -12,21 +12,19 @@ function LF_Status = Mat2Sin_StartLFProfile(Sin_Name,Sin_Path,SincalVersion)
 %
 %       SincalVersion (Optional)  - Double that defines the Sincal Version
 %                                   installed at your PC
+%
 %       LF_Status     (Output)    - String
 %                                 - Info message about the Load-flow status
 %
-% RB, 2015
-% PG, 05.10.2017
+%   Author(s): J. Greiner
+%              R. Brandalik
 
-%% Matlab connection with the Access DB of the Sincal model 
+%% Input check
 
-% Set the default path if no path is given
-if nargin<2
-    Sin_Path = [pwd,'\'];
-end
-
+if nargin < 2; Sin_Path = [pwd,'\']; end                % Set the default path if no path is given
+if Sin_Path(end) ~= '\'; Sin_Path = [Sin_Path,'\']; end % Correct the path if necessary
 % Check installed Sincal Version
-if nargin<3
+if nargin < 3
     max_Version_Sincal  = 14;
     max_Version_Mat2Sin = 11;
     VersionInstalled = false;
@@ -45,10 +43,10 @@ else
     Mat2SinVersion = -17 + 2 * SincalVersion;
 end
 
-% Correct the path if necessary
-if Sin_Path(end) ~= '\'
-    Sin_Path = [Sin_Path,'\'];
-end
+%% Matlab connection with the Access DB of the Sincal model 
+
+
+disp(['Starting power flow calculation of ',Sin_Name,'.']);
 
 % Define an object for the connection with Sincal
 s=struct;
@@ -85,20 +83,18 @@ try
     % Check if the Load Flow Calculation was successful
     if s.conn.StatusID == 1101
         % Status ID 1101 means successful load flow
-        LF_Status = ['Power flow calculation of ',Sin_Name,' Successful'];
+        disp(['Power flow calculation of ',Sin_Name,' successful.']);
     else
-        % No Error, but Load Flow was not successful
-        LF_Status = ['Power flow calculation of ',Sin_Name,' Failed'];
         % Stop the Sincal connection, to avoid Matlab from breaking down
-        [s.conn] = deal([]); %#ok
-        return;
+        [s.conn] = deal([]);
+        % Load Flow was not successful, treat it as error
+        error(['Power flow calculation of ',Sin_Name,' failed.']);
     end
 catch
     % Stop the Sincal connection, to avoid Matlab from breaking down
     [s.conn] = deal([]); %#ok
     % Error in Matlab
-    LF_Status = ['Matlab Error occured during ',Sin_Name,' power flow calculation'];
-    return;
+    error(['Matlab Error occured during ',Sin_Name,' power flow calculation.']);
 end
 
 %% Stopping the Sincal connection
