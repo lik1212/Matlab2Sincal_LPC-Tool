@@ -1,562 +1,189 @@
-function Output_read_NodeRes(Save_Path,Sin_Path_Output,SinNameBasic,instants_per_grid,num_grids,SinInfo,Output_Name,Settings)
-% function read the NodeRes .txt files (one file per Grid) and creates a .mat database 
-% with all Power Flow result
-%   Author(s): P. Gassler
-%              based on code from R. Brandalik
+function Output_read_NodeRes(Path_Output, Path_Input, SinNameBasic, instants_per_grid, num_grids, SinInfo, Settings)
+% function read the NodeRes .txt files (one file per Grid) and creates a
+% .mat database with chosen Power Flow result
+%
+% Author(s): P. Gassler, R. Brandalik
 %              
 %% Import NodeRes Files in Matlab memory
 
-for k_grid = 1 : num_grids
-    NodeRes_Name = [Sin_Path_Output,'NodeRes_',SinNameBasic,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'.txt'];
+for k_grid = 1 : num_grids % Read in all NodeRes files
+    File_suffix  = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];
+    NodeRes_Name = [Path_Input, 'NodeRes_', SinNameBasic, File_suffix, '.txt'];
     if k_grid == 1
-        k_SimData = readtable(NodeRes_Name);
-        Node_all      = SinInfo.Node.Node_ID;
-        Node_occur    = unique(k_SimData.Node_ID);
-        Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
-        Missing_Nodes = setdiff(Node_all,Node_occur);
-        NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
-        NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
-        VarNames   = k_SimData.Properties.VariableNames;
-        NaN_Table.Properties.VariableNames = VarNames;
-        NaN_Table.ResTime = NaN_Steps;
-        NaN_Table.Node_ID = repmat(Node_occur,numel(Missing_Steps),1);
-        k_SimData     = [k_SimData; NaN_Table];
-        NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
-        NaN_Table.Properties.VariableNames = VarNames;
-        NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';
-        NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
-        k_SimData     = [k_SimData; NaN_Table];
-        k_SimData = sortrows(k_SimData,'Node_ID','ascend');
-        k_SimData = sortrows(k_SimData,'ResTime','ascend');
-        num_elements = size(k_SimData,1);
-        SimData   = array2table(zeros(...
-            num_elements*num_grids,...
-            size(k_SimData,2)));
-        SimData.Properties.VariableNames = VarNames;
-        % Data merging
-        SimData(...
-            (k_grid - 1) * num_elements + 1 : ...
-            k_grid * num_elements,...
-            :) = k_SimData;
+        ResData   = readtable(NodeRes_Name);
     else
-        k_SimData         = readtable(NodeRes_Name);
-        Node_all      = SinInfo.Node.Node_ID;
-        Node_occur     = unique(k_SimData.Node_ID);
-        Missing_Steps = setdiff(1:instants_per_grid,k_SimData.ResTime);
-        Missing_Nodes = setdiff(Node_all,Node_occur);
-        NaN_Steps     = repelem(Missing_Steps',numel(Node_occur),1);
-        NaN_Table     = array2table(NaN(numel(NaN_Steps),size(k_SimData,2)));
-        VarNames   = k_SimData.Properties.VariableNames;
-        NaN_Table.Properties.VariableNames = VarNames;
-        NaN_Table.ResTime = NaN_Steps;
-        NaN_Table.Node_ID = repmat(unique(k_SimData.Node_ID),numel(Missing_Steps),1);
-        k_SimData     = [k_SimData; NaN_Table];
-        NaN_Table     = array2table(NaN(numel(Missing_Nodes) * instants_per_grid,size(k_SimData,2)));
-        NaN_Table.Properties.VariableNames = VarNames;
-        NaN_Table.ResTime = repmat(1:instants_per_grid,1,numel(Missing_Nodes))';
-        NaN_Table.Node_ID = repelem(Missing_Nodes,instants_per_grid,1);
-        k_SimData     = [k_SimData; NaN_Table];
-        k_SimData = sortrows(k_SimData,'Node_ID','ascend');
-        k_SimData = sortrows(k_SimData,'ResTime','ascend');
+        k_SimData = readtable(NodeRes_Name);
         % ResTime auf Instanz anpassen
-        k_SimData.ResTime = (k_grid-1)*instants_per_grid + (k_SimData.ResTime);
-        SimData(...
-            (k_grid - 1) * num_elements + 1 : ...
-            k_grid * num_elements,...
-            :) = k_SimData;
+        k_SimData.ResTime = k_SimData.ResTime + (k_grid - 1) * instants_per_grid;
+        ResData = [ResData; k_SimData]; %#ok The size of the file is unknown
+        clear k_SimData                 % To reduce RAM usage
     end
-    %     fprintf('Das %d. von %d NodeRes Files ist eingelesen worden.\n',k_grid,num_grids);
-    disp([NodeRes_Name,' loaded.']);
+    disp([NodeRes_Name, ' loaded.']);
 end
-clear k_SimData
-SimData = sortrows(SimData,'Node_ID','ascend');
-SimData = sortrows(SimData,'ResTime','ascend');
+
+%% Temp for tests (TODO)
+
+% ResData(ResData.Node_ID == 3,:) = [];
+% ResData(ResData.Node_ID == 5,:) = [];
+% ResData(ResData.ResTime == 7,:) = [];
+% ResData(ResData.ResTime == 9,:) = [];
+
+%% Fill missing timesteps (load flow did not converge) and isolated nodes
+
+Node_all   = SinInfo.Node.Node_ID;
+Step_all   = double(1:instants_per_grid * num_grids)'; 
+Node_occur = unique(ResData.Node_ID);
+Step_occur = unique(ResData.ResTime);
+Node_lack  = setdiff(Node_all, Node_occur);
+Step_lack  = setdiff(Step_all, Step_occur);
+% Missing timesteps (load flow did not converge)
+NaN_Table_Steps = array2table(...
+    NaN(numel(Step_lack) * numel(Node_occur), size(ResData, 2)),...
+    'VariableName', ResData.Properties.VariableNames);
+NaN_Table_Steps.ResTime = repelem(Step_lack , numel(Node_occur), 1);
+NaN_Table_Steps.Node_ID = repmat (Node_occur, numel(Step_lack) , 1);
+% Missing nodes (isolated in the grid)
+NaN_Table_Nodes = array2table(...
+    NaN(numel(Node_lack) * numel(Step_all)  , size(ResData, 2)),...
+    'VariableName', ResData.Properties.VariableNames);
+NaN_Table_Nodes.ResTime = repmat (Step_all , numel(Node_lack), 1);
+NaN_Table_Nodes.Node_ID = repelem(Node_lack, numel(Step_all) , 1);
+
+ResData = [ResData; NaN_Table_Steps; NaN_Table_Nodes];
+ResData = sortrows(ResData,'Node_ID','ascend');
+ResData = sortrows(ResData,'ResTime','ascend');
 
 %% Saving only RAW data in a file and leaving function
+
 if Settings.Output_option_raw_only
-    Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
-    SimData_Filename = [Save_Path,Output_Filename];
-    NodeRes_all = SimData;
-    SimData = [];
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw.mat'];
+    NodeRes_all = ResData; clear ResData; %#ok Change name, the variable will just be saved
     NodeRes_all_Bytes = whos('NodeRes_all');
-    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
+    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes;
     if NodeRes_all_Bytes > 2 * 1024^3
         save(SimData_Filename,'NodeRes_all','-v7.3');
     else
         save(SimData_Filename,'NodeRes_all');
     end
     return
-    % Saving RAW data in a file
-elseif Settings.Output_option_raw
-    Output_Filename = [Output_Name,'_NodeRes_raw.mat'];
-    SimData_Filename = [Save_Path,Output_Filename];
-    NodeRes_all = SimData;
+elseif Settings.Output_option_raw % Saving RAW data in a file
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw.mat'];
+    NodeRes_all = ResData; %#ok, the variable will just be saved
     NodeRes_all_Bytes = whos('NodeRes_all');
-    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes; % The variable will just be saved
+    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes;
     if NodeRes_all_Bytes > 2 * 1024^3
         save(SimData_Filename,'NodeRes_all','-v7.3');
     else
         save(SimData_Filename,'NodeRes_all');
     end
-    clear NodeRes_all;
+    clear NodeRes_all; % To reduce RAM usage
 end
 
-%% Deleting ResTime
+%% Read out flag and make column name translator
 
-SimData.ResTime = [];
-
-%% Saving Node Names and IDs
-
-Node_IDs        = unique(SimData.Node_ID);
-NodeNames       = cell(numel(Node_IDs),1);  % Initialisierung
-NodeVarNames    = cell(numel(Node_IDs),1);
-for k = 1 : numel(Node_IDs)
-    NodeNames{k} = SinInfo.Node.Name{SinInfo.Node.Node_ID == Node_IDs(k)};
-    if (NodeNames{k}(2))=='-'
-%         NodeNames{k} = [NodeNames{k}(1),'_',NodeNames{k}(3:end)];
-        NodeNames{k} = [NodeNames{k}(1),NodeNames{k}(3:end)];
-    end
-    NodeVarNames{k} = ['ID',num2str(Node_IDs(k)),'_',NodeNames{k}];
+if Settings.Output_option_U == true
+    U_flag = {        ...
+        'U1', 'U_L1'; ...
+        'U2', 'U_L2'; ...
+        'U3', 'U_L3'; ...
+        'Ue', 'U_L0'; ...
+        };
+else; U_flag = {}; 
 end
-Nodes = table;
-Nodes.IDs = Node_IDs;
-Nodes.Names = NodeNames;
-
-%% Declaration of Database for results classified per Node or per Unit
-
-if Settings.Output_option_per_node_branch
-    SimResults_Nodes_per_nodes = struct;
-    for k = 1 : numel(Node_IDs)
-        SimResults_Nodes_per_nodes.(NodeNames{k}) = table;
-    end
+if Settings.Output_option_P == true
+    P_flag = {        ...
+        'P1', 'P_L1'; ...
+        'P2', 'P_L2'; ...
+        'P3', 'P_L3'; ...
+        };
+else; P_flag = {}; 
 end
-if Settings.Output_option_per_unit
-    SimResults_Nodes_per_units = struct;
-    SimResults_Nodes_per_units.Nodes = Nodes;
-%     if Settings.T_vector
-%         SimResults_Nodes_per_units.Time_Vector = Time_Vector;
-%     end
-    if Settings.Output_option_Sin_Info
-        SimResults_Nodes_per_units.Grid_Info = SinInfo;
-    end
+if Settings.Output_option_Q == true
+    Q_flag = {        ...
+        'Q1', 'Q_L1'; ...
+        'Q2', 'Q_L2'; ...
+        'Q3', 'Q_L3'; ...
+        };
+else; Q_flag = {}; 
 end
-
-%% Saving Voltage U_L1
-
-if Settings.Output_option_U
-    if Settings.Output_option_per_unit
-        U_L1           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            U_L1(:,k) = SimData.U1(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.U_L1 = table;
-        SimResults_Nodes_per_units.U_L1 = array2table(U_L1,'VariableNames',NodeVarNames);
-        clear U_L1;
-    end
-    if Settings.Output_option_per_node_branch
-        U_L1 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            U_L1 = SimData.U1(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).U_L1 = U_L1;
-        end
-         clear U_L1;
-    end
-    SimData.U1 = [];
+if Settings.Output_option_S == true
+    S_flag = {          ...
+        'S1', 'S_L1'  ; ...
+        'S2', 'S_L2'  ; ...
+        'S3', 'S_L3'  ; ...
+        'S' , 'S_L123'; ...
+        };
+else; S_flag = {}; 
+end
+if Settings.Output_option_phi == true
+    phi_flag = {          ...
+        'phi1', 'phi_L1'; ...
+        'phi2', 'phi_L2'; ...
+        'phi3', 'phi_L3'; ...
+        };
+else; phi_flag = {}; 
 end
 
-%% Saving Voltage U_L2
+all_flag = [U_flag; P_flag; Q_flag; S_flag; phi_flag];
 
-if Settings.Output_option_U
-    if Settings.Output_option_per_unit
-        U_L2           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            U_L2(:,k) = SimData.U2(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.U_L2 = table;
-        SimResults_Nodes_per_units.U_L2 = array2table(U_L2,'VariableNames',NodeVarNames);
-        clear U_L2;
-    end
-    if Settings.Output_option_per_node_branch
-        U_L2 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            U_L2 = SimData.U2(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).U_L2 = U_L2;
-        end
-         clear U_L2;
-    end
-    SimData.U2 = [];
-end
+%% Name and ID prepeartion
+% Column names of tables can not start with numbers or have some special
+% characters like '-', this section will try to avoid such problems.
 
-%% Saving Voltage U_L3
+Node_IDs     = SinInfo.Node.Node_ID;
+NodeNames    = strrep(SinInfo.Node.Name,'-','');  % Initialisierung, field name without '-'
+NodeVarNames = strrep(                                              ...
+    strcat('ID',num2str(double(1:numel(Node_IDs))'),'_',NodeNames)  ...
+    ,' ','');
 
-if Settings.Output_option_U
-    if Settings.Output_option_per_unit
-        U_L3           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            U_L3(:,k) = SimData.U3(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.U_L3 = table;
-        SimResults_Nodes_per_units.U_L3 = array2table(U_L3,'VariableNames',NodeVarNames);
-        clear U_L3;
-    end
-    if Settings.Output_option_per_node_branch
-        U_L3 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            U_L3 = SimData.U3(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).U_L3 = U_L3;
-        end
-         clear U_L3;
-    end
-    SimData.U3 = [];
-end
+%% Assemble variables per units and nodes
 
-%% Saving Voltage U_L0
+ResData.ResTime = []; % To reduce RAM usage
 
-if Settings.Output_option_U
-    if Settings.Output_option_per_unit
-        U_L0           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            U_L0(:,k) = SimData.Ue(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.U_L0 = table;
-        SimResults_Nodes_per_units.U_L0 = array2table(U_L0,'VariableNames',NodeVarNames);
-        clear U_L0;
-    end
-    if Settings.Output_option_per_node_branch
-        U_L0 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            U_L0 = SimData.Ue(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).U_L0 = U_L0;
-        end
-         clear U_L0;
-    end
-    SimData.Ue = [];
-end
+SimResults_Nodes_per_units = struct; % initial
+SimResults_Nodes_per_nodes = struct; % initial
 
-%% Saving Power P_L1
-
-if Settings.Output_option_P
-    if Settings.Output_option_per_unit
-        P_L1           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            P_L1(:,k) = SimData.P1(SimData.Node_ID == Node_IDs(k));
+for k_flag = 1 : size(all_flag, 1)
+    for k_Node = 1 : numel(Node_IDs)
+        if Settings.Output_option_per_unit
+            if k_Node == 1 % initial as table
+                SimResults_Nodes_per_units.(all_flag{k_flag, 2}) = table;
+            end
+            SimResults_Nodes_per_units.(all_flag{k_flag, 2}).(NodeVarNames{k_Node}) = ...
+                ResData.((all_flag{k_flag, 1}))(ResData.Node_ID == Node_IDs(k_Node));
         end
-        SimResults_Nodes_per_units.P_L1 = table;
-        SimResults_Nodes_per_units.P_L1 = array2table(P_L1,'VariableNames',NodeVarNames);
-        clear P_L1;
-    end
-    if Settings.Output_option_per_node_branch
-        P_L1 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            P_L1 = SimData.P1(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).P_L1 = P_L1;
+        if Settings.Output_option_per_node_branch
+            if k_flag == 1 % initial as table
+                SimResults_Nodes_per_nodes.(NodeNames{k_Node}) = table;
+            end
+            SimResults_Nodes_per_nodes.(NodeNames{k_Node}).(all_flag{k_flag, 2}) = ...
+                ResData.((all_flag{k_flag, 1}))(ResData.Node_ID == Node_IDs(k_Node));
         end
-         clear P_L1;
     end
-    SimData.P1 = [];
-end
-
-%% Saving Power P_L2
-
-if Settings.Output_option_P
-    if Settings.Output_option_per_unit
-        P_L2           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            P_L2(:,k) = SimData.P2(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.P_L2 = table;
-        SimResults_Nodes_per_units.P_L2 = array2table(P_L2,'VariableNames',NodeVarNames);
-        clear P_L2;
-    end
-    if Settings.Output_option_per_node_branch
-        P_L2 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            P_L2 = SimData.P2(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).P_L2 = P_L2;
-        end
-         clear P_L2;
-    end
-    SimData.P2 = [];
-end
-
-%% Saving Power P_L3
-
-if Settings.Output_option_P
-    if Settings.Output_option_per_unit
-        P_L3           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            P_L3(:,k) = SimData.P3(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.P_L3 = table;
-        SimResults_Nodes_per_units.P_L3 = array2table(P_L3,'VariableNames',NodeVarNames);
-        clear P_L3;
-    end
-    if Settings.Output_option_per_node_branch
-        P_L3 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            P_L3 = SimData.P3(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).P_L3 = P_L3;
-        end
-         clear P_L3;
-    end
-    SimData.P3 = [];
-end
-
-%% Saving Power Q_L1
-
-if Settings.Output_option_Q
-    if Settings.Output_option_per_unit
-        Q_L1           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            Q_L1(:,k) = SimData.Q1(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.Q_L1 = table;
-        SimResults_Nodes_per_units.Q_L1 = array2table(Q_L1,'VariableNames',NodeVarNames);
-        clear Q_L1;
-    end
-    if Settings.Output_option_per_node_branch
-        Q_L1 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            Q_L1 = SimData.Q1(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).Q_L1 = Q_L1;
-        end
-         clear Q_L1;
-    end
-    SimData.Q1 = [];
-end
-
-%% Saving Power Q_L2
-
-if Settings.Output_option_Q
-    if Settings.Output_option_per_unit
-        Q_L2           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            Q_L2(:,k) = SimData.Q2(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.Q_L2 = table;
-        SimResults_Nodes_per_units.Q_L2 = array2table(Q_L2,'VariableNames',NodeVarNames);
-        clear Q_L2;
-    end
-    if Settings.Output_option_per_node_branch
-        Q_L2 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            Q_L2 = SimData.Q2(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).Q_L2 = Q_L2;
-        end
-         clear Q_L2;
-    end
-    SimData.Q2 = [];
-end
-
-%% Saving Power Q_L3
-
-if Settings.Output_option_Q
-    if Settings.Output_option_per_unit
-        Q_L3           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            Q_L3(:,k) = SimData.Q3(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.Q_L3 = table;
-        SimResults_Nodes_per_units.Q_L3 = array2table(Q_L3,'VariableNames',NodeVarNames);
-        clear Q_L3;
-    end
-    if Settings.Output_option_per_node_branch
-        Q_L3 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            Q_L3 = SimData.Q3(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).Q_L3 = Q_L3;
-        end
-         clear Q_L3;
-    end
-    SimData.Q3 = [];
-end
-
-%% Saving Power S_L1
-
-if Settings.Output_option_S
-    if Settings.Output_option_per_unit
-        S_L1           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            S_L1(:,k) = SimData.S1(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.S_L1 = table;
-        SimResults_Nodes_per_units.S_L1 = array2table(S_L1,'VariableNames',NodeVarNames);
-        clear S_L1;
-    end
-    if Settings.Output_option_per_node_branch
-        S_L1 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            S_L1 = SimData.S1(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).S_L1 = S_L1;
-        end
-         clear S_L1;
-    end
-    SimData.S1 = [];
-end
-
-%% Saving Power S_L2
-
-if Settings.Output_option_S
-    if Settings.Output_option_per_unit
-        S_L2           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            S_L2(:,k) = SimData.S2(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.S_L2 = table;
-        SimResults_Nodes_per_units.S_L2 = array2table(S_L2,'VariableNames',NodeVarNames);
-        clear S_L2;
-    end
-    if Settings.Output_option_per_node_branch
-        S_L2 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            S_L2 = SimData.S2(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).S_L2 = S_L2;
-        end
-         clear S_L2;
-    end
-    SimData.S2 = [];
-end
-
-%% Saving Power S_L3
-
-if Settings.Output_option_S
-    if Settings.Output_option_per_unit
-        S_L3           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            S_L3(:,k) = SimData.S3(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.S_L3 = table;
-        SimResults_Nodes_per_units.S_L3 = array2table(S_L3,'VariableNames',NodeVarNames);
-        clear S_L3;
-    end
-    if Settings.Output_option_per_node_branch
-        S_L3 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            S_L3 = SimData.S3(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).S_L3 = S_L3;
-        end
-         clear S_L3;
-    end
-    SimData.S3 = [];
-end
-
-%% Saving Power S_L123
-
-if Settings.Output_option_S
-    if Settings.Output_option_per_unit
-        S_L123           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            S_L123(:,k) = SimData.S(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.S_L123 = table;
-        SimResults_Nodes_per_units.S_L123 = array2table(S_L123,'VariableNames',NodeVarNames);
-        clear S_L123;
-    end
-    if Settings.Output_option_per_node_branch
-        S_L123 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            S_L123 = SimData.S(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).S_L123 = S_L123;
-        end
-         clear S_L123;
-    end
-    SimData.S = [];
-end
-
-%% Saving Phi_L1
-
-if Settings.Output_option_phi
-    if Settings.Output_option_per_unit
-        Phi_L1           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            Phi_L1(:,k) = SimData.phi1(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.Phi_L1 = table;
-        SimResults_Nodes_per_units.Phi_L1 = array2table(Phi_L1,'VariableNames',NodeVarNames);
-        clear Phi_L1;
-    end
-    if Settings.Output_option_per_node_branch
-        Phi_L1 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            Phi_L1 = SimData.phi1(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).Phi_L1 = Phi_L1;
-        end
-         clear Phi_L1;
-    end
-    SimData.phi1 = [];
-end
-
-%% Saving Phi_L2
-
-if Settings.Output_option_phi
-    if Settings.Output_option_per_unit
-        Phi_L2           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            Phi_L2(:,k) = SimData.phi2(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.Phi_L2 = table;
-        SimResults_Nodes_per_units.Phi_L2 = array2table(Phi_L2,'VariableNames',NodeVarNames);
-        clear Phi_L2;
-    end
-    if Settings.Output_option_per_node_branch
-        Phi_L2 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            Phi_L2 = SimData.phi2(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).Phi_L2 = Phi_L2;
-        end
-         clear Phi_L2;
-    end
-    SimData.phi2 = [];
-end
-
-%% Saving Phi_L3
-
-if Settings.Output_option_phi
-    if Settings.Output_option_per_unit
-        Phi_L3           = zeros(instants_per_grid*num_grids,numel(Node_IDs));
-        for k = 1 : numel(Node_IDs)
-            Phi_L3(:,k) = SimData.phi3(SimData.Node_ID == Node_IDs(k));
-        end
-        SimResults_Nodes_per_units.Phi_L3 = table;
-        SimResults_Nodes_per_units.Phi_L3 = array2table(Phi_L3,'VariableNames',NodeVarNames);
-        clear Phi_L3;
-    end
-    if Settings.Output_option_per_node_branch
-        Phi_L3 = zeros(instants_per_grid*num_grids,1);
-        for k = 1 : numel(Node_IDs)
-            Phi_L3 = SimData.phi3(SimData.Node_ID == Node_IDs(k));
-            SimResults_Nodes_per_nodes.(NodeNames{k}).Phi_L3 = Phi_L3;
-        end
-         clear Phi_L3;
-    end
-    SimData.phi3 = [];
+    ResData.((all_flag{k_flag, 1})) = []; % To reduce RAM usage
 end
 
 %% Saving the results in .mat files
 
 if Settings.Output_option_per_unit
-    Output_Filename = [Output_Name,'_NodeRes_per_units.mat'];
-    SimData_Filename = [Save_Path,Output_Filename];
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_units.mat'];
     SimResults_Nodes_per_units_Bytes = whos('SimResults_Nodes_per_units');
     SimResults_Nodes_per_units_Bytes = SimResults_Nodes_per_units_Bytes.bytes; % The variable will just be saved
     if SimResults_Nodes_per_units_Bytes > 2 * 1024^3
-        save(SimData_Filename,'SimResults_Nodes_per_units','-v7.3');
+        save(SimData_Filename, 'SimResults_Nodes_per_units', '-v7.3');
     else
-        save(SimData_Filename,'SimResults_Nodes_per_units');
+        save(SimData_Filename, 'SimResults_Nodes_per_units'         );
     end
-    disp([SimData_Filename,' saved.']);
+    disp([SimData_Filename, ' saved.']);
 end
 if Settings.Output_option_per_node_branch
-    Output_Filename = [Output_Name,'_NodeRes_per_nodes.mat'];
-    SimData_Filename = [Save_Path,Output_Filename];
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_nodes.mat'];
     SimResults_Nodes_per_nodes_Bytes = whos('SimResults_Nodes_per_nodes');
     SimResults_Nodes_per_nodes_Bytes = SimResults_Nodes_per_nodes_Bytes.bytes; % The variable will just be saved
     if SimResults_Nodes_per_nodes_Bytes > 2 * 1024^3  
-        save(SimData_Filename,'SimResults_Nodes_per_nodes','-v7.3');
+        save(SimData_Filename, 'SimResults_Nodes_per_nodes', '-v7.3');
     else
-        save(SimData_Filename,'SimResults_Nodes_per_nodes');
+        save(SimData_Filename, 'SimResults_Nodes_per_nodes'         );
     end
-    disp([SimData_Filename,' saved.']);
-end
-
+    disp([SimData_Filename, ' saved.']);
 end
