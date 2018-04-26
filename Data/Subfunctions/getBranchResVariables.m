@@ -59,7 +59,7 @@ Col_Name_ULFBranchRes = {   ...
     'phiI3'       			...
 };
 
-%%
+%% Get Variables based on the Settings
 
 Vector = [2, 3, 41]; % Terminal1_ID, Terminal2_ID, ResTime
 if Settings.Output_option_P_flow; Vector = [Vector, 5, 11, 17]; end

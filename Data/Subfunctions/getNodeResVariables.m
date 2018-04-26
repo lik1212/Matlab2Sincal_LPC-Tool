@@ -66,7 +66,7 @@ Col_Name_ULFNodeRes = { ...
     'U31_Uref'          ...
 };
 
-%%
+%% Get Variables based on the Settings
 
 Vector = [2, 47];   % Node_ID & ResTime
 if Settings.Output_option_U  ; Vector = [Vector, 4, 10, 16, 22]; end
