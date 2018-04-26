@@ -159,13 +159,13 @@ mkdir(Temp_Grids_Path );
 %% Load static input (e.q. column names of tables in sincal database)
 
 % Column names of Table ULFNodeRes und ULFBranchRes
-load([pwd, '\Data\Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  );
-load([pwd, '\Data\Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult');
+% load([pwd, '\Data\Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  ); % TODO: Delete this files
+% load([pwd, '\Data\Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult'); % TODO: Delete this files
 % load([pwd, '\Data\Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          ); % TODO: Delete this files
 % load([pwd, '\Data\Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       ); % TODO: Delete this files
 
-NodeVector   = calcNodeOutputVector  (Settings);
-BranchVector = calcBranchOutputVector(Settings);
+NodeResVariables   = calcNodeOutputVector  (Settings);
+BranchResVariables = calcBranchOutputVector(Settings);
 
 DB_Name = 'database';
 DB_Type = '.mdb'    ;
@@ -440,37 +440,39 @@ end
 
 if Settings.ParrallelCom == false % Not parralel    
     for k_grid    = 1 : num_grids % over all grids
-        GridNameCopy = [Grid_Name, '_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];
-        Mat2Sin_StartLFProfile(GridNameCopy, Temp_Grids_Path, VerSincal); % Calculate load flow with load profiles
+        File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];
+        Mat2Sin_StartLFProfile([Grid_Name, File_suffix], Temp_Grids_Path, VerSincal); % Calculate load flow with load profiles
     end
 else
     parfor k_grid = 1 : num_grids % over all grids
-        GridNameCopy = [Grid_Name, '_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];       
-        Mat2Sin_StartLFProfile(GridNameCopy, Temp_Grids_Path, VerSincal); % Calculate load flow with load profiles
+        File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];  
+        Mat2Sin_StartLFProfile([Grid_Name, File_suffix], Temp_Grids_Path, VerSincal); % Calculate load flow with load profiles
     end
 end
 
 % It seems that sometimes it is mor sable to restart parallel pool
 % poolobj = gcp('nocreate'); delete(poolobj); parpool('local',Settings.NumelCores);
 
-%% Database2Txt
+%% Read out database table values into txt files
 
 if waitbar_activ; waitbar(wb_stat(8), wb_Fig, 'Creating NodeRes and BranchRes files'); end % Waitbar Update
 
-Column_str_Node   = strjoin(Col_Name_ULFNodeResult  (NodeVector  ),', '); % Sql command (string) part that contains Column Names   
-Column_str_Branch = strjoin(Col_Name_ULFBranchResult(BranchVector),', '); % Sql command (string) part that contains Column Names
-k_grid_input = 1:num_grids;
-Done_all = false(num_grids,1);
+Column_str_Node   = strjoin(NodeResVariables  , ', '); % Sql command part that contains Column Names in ULFNodeRes
+Column_str_Branch = strjoin(BranchResVariables, ', '); % Sql command part that contains Column Names in ULFBranchRes
+
+Done_all = false(num_grids, 1);     % If some executions fail in parrallel, they will be done without parralel
 if Settings.ParrallelCom == false   % Not parralel
-    for k = 1:num_grids % over all grids
-        if ~Done_all(k)
-            Done_all(k) = create_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path);
+    for k_grid = 1:num_grids % over all grids
+        if ~Done_all(k_grid)
+            File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];  
+            Done_all(k_grid) = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch);
         end
     end
 else
-    parfor k = 1:num_grids % over all grids
-        if ~Done_all(k)
-            Done_all(k) = create_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path);
+    parfor k_grid = 1:num_grids % over all grids
+        if ~Done_all(k_grid)
+            File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];  
+            Done_all(k_grid) = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch);
         end
     end
 end
@@ -479,11 +481,12 @@ end
 
 %% second try Database2Txt (to improve), not parallel
 
-for k = 1:num_grids % second try ... to improve
-    if ~Done_all(k)
-        Done_all(k) = create_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path);
-    end
-end
+% for k_grid = 1:num_grids % second try ... to improve
+%     if ~Done_all(k_grid)
+%         SinName         = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)          ];
+%         Done_all(k_grid) = create_txt_output(SinName, Temp_Grids_Path, Column_str_Node, Column_str_Branch, Temp_Output_Path);
+%     end
+% end
 
 %% Output preperation
 
@@ -616,20 +619,12 @@ sql_in = {...
 Matlab2Access_ExecuteSQL(sql_in, 'database', DB__PathCopy , '.mdb');
 end
 
-%%
+%% Create the txt output files with results of the Sincal calculation
 
-function Done_this = create_txt_output(k_grid_input,k,Grid_Name,instants_per_grid,Temp_Grids_Path,DB_Name,DB_Type,Column_str_Node,Column_str_Branch,Temp_Output_Path)
-k_grid = k_grid_input(k);
-SinName         = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)];
-SinFolName      = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid),'_files\'];
-name_txt        = ['NodeRes_',SinName,'.txt'];     % Save load flow results as txt files
-table_Name      = 'ULFNodeResult';               % Results from ULFNodeResult
-% Sql command for reading from Table FROM ULFNodeResult + writing Table
-% ULFNodeResult in a .txt-file
-sql_command_str = ['SELECT ' ,Column_str_Node, ' INTO [Text;HDR=YES;DATABASE=',Temp_Output_Path,'].[',name_txt,'] FROM ', table_Name ];
-Matlab2Access_ExecuteSQL(sql_command_str, DB_Name,[Temp_Grids_Path,SinFolName],DB_Type);
-name_txt        = ['BranchRes_',SinName,'.txt'];
-table_Name      = 'ULFBranchResult';        % Results from ULFBranchResult
-sql_command_str = ['SELECT ' ,Column_str_Branch, ' INTO [Text;HDR=YES;DATABASE=',Temp_Output_Path,'].[',name_txt,'] FROM ', table_Name ];
-Done_this = Matlab2Access_ExecuteSQL(sql_command_str, DB_Name, [Temp_Grids_Path,SinFolName], DB_Type);
+function Done_this = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch)
+sql_command_str = {... % Sql command for reading write a table as txt file
+    ['SELECT ', Column_str_Node  , ' INTO [Text;HDR=YES;DATABASE=', Temp_Output_Path,'].[NodeRes_'  , [Grid_Name, File_suffix], '.txt] FROM ULFNodeResult'  ];...
+    ['SELECT ', Column_str_Branch, ' INTO [Text;HDR=YES;DATABASE=', Temp_Output_Path,'].[BranchRes_', [Grid_Name, File_suffix], '.txt] FROM ULFBranchResult'] ...
+    };
+Done_this = Matlab2Access_ExecuteSQL(sql_command_str, 'database', [Temp_Grids_Path, Grid_Name, File_suffix, '_files'], '.mdb');
 end
