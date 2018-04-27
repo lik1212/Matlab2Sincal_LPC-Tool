@@ -1,4 +1,9 @@
-function [AAPD_P, AAPD_Q] = Create_Pseudo_Measurements_Loads_Voltage_Diff_RB(Num_Loads, Date_Time, tan_phi)
+% function [AAPD_P, AAPD_Q] = Create_Pseudo_Measurements_Loads_Voltage_Diff_RB(Num_Loads, Date_Time, tan_phi)
+%
+%   % (TODO: Implement in future)
+%   Author(s): P. Gassler,
+%              R. Brandalik
+
 %% Position vectors
 
 Date_Time_Winter =      ...
