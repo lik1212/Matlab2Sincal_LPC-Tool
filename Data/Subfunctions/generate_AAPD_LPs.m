@@ -1,9 +1,11 @@
-function DB_synth_AAPD = generate_AAPD_LPs(nb_LPs,type,output_type,time_resolution,Date_Time_first,Date_Time__last)
+% function DB_synth_AAPD = generate_AAPD_LPs(nb_LPs,type,output_type,time_resolution,Date_Time_first,Date_Time__last)
 %% Generate load profiles with the Approximate Active Power Distributions (AAPD)  
 %
-%
-% Author(s): P.Gassler
+%   % (TODO: Implement in future)
+%   Author(s): P. Gassler,
+%              R. Brandalik
 
+%%
 switch type
     case '3P'
         nb_LPs = nb_LPs * 3;

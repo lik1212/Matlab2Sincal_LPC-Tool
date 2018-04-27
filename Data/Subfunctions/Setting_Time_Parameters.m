@@ -1,9 +1,10 @@
-function TimeSetup = Setting_Time_Parameters(TimeSetup,Inputs)
+% function TimeSetup = Setting_Time_Parameters(TimeSetup,Inputs)
 %%
-%
-%
-% Author(s): P.Gassler
+%   % (TODO: Implement in future)
+%   Author(s): P. Gassler,
+%              R. Brandalik
 
+%%
 % cases = [false false false false];
 instants_per_grid_max = 5256;
 cases(1) = isfield(Inputs,'TimeSetup_First_Moment');
