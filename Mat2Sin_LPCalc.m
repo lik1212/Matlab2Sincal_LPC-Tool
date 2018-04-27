@@ -1,77 +1,70 @@
 function status = Mat2Sin_LPCalc(Inputs)
-%% Mat2Sin_LPCalc (TODO: adjust Input list)
+%%Mat2Sin_LPCalc
 %   
-%   Mat2Sin_LPCalc      - This script demonstrates the work of the load
-%                         flow calculation for load profiles (load flow 
-%                         calculation for more than one timestamp at once) 
-%                         in Sincal managed from Matlab.
+%   Mat2Sin_LPCalc - This script demonstrates the work of the load
+%                    flow calculation for load profiles (load flow 
+%                    calculation for more than one timestamp at once) 
+%                    in Sincal managed from Matlab.
 %
-%                       - Duo to the maximum 2GB database size of Access
-%                         databases, the profiles need to be split into
-%                         smaller profiles if the load flow results 
-%                         exceed 2GB.
+%                  - Duo to the maximum 2GB database size of Access
+%                    databases, the profiles need to be split into
+%                    smaller profiles if the load flow results 
+%                    exceed 2GB.
 %
-%   Inputs                Structure with all necessary inputs
-%                           Inputs.Grid_Path
-%                           Inputs.Grid_Name
-%                           Inputs.LP_DB_Type
-%                           Inputs.PV_DB_Type
-%                           Inputs.LP_DB_Path
-%                           Inputs.LP_DB_Name
-%                           Inputs.PV_DB_Path
-%                           Inputs.PV_DB_Name
-%                           Inputs.LP_dist_type
-%                           Inputs.LP_dist_path
-%                           Inputs.LP_dist_list_name
-%                           Inputs.PV_dist_type
-%                           Inputs.PV_dist_path
-%                           Inputs.PV_dist_list_name
-%                           Inputs.TimeSetup_First_Moment       (TODO)
-%                           Inputs.TimeSetup_Last_Moment        (TODO)
-%                           Inputs.TimeSetup_Time_Step          (TODO)
-%                           Inputs.TimeSetup_num_of_instants    (TODO)
-%                           Inputs.TimeSetup_First_Moment_PF    (TODO)
-%                           Inputs.TimeSetup_Last_Moment_PF     (TODO)
-%                           Inputs.Output_option_raw
-%                           Inputs.Output_option_raw_only
-%                           Inputs.Output_option_per_node_branch
-%                           Inputs.Output_option_per_unit
-%                           Inputs.Output_option_del_temp_files
-%                           Inputs.Output_option_preparation
-%                           Inputs.Output_option_U
-%                           Inputs.Output_option_P
-%                           Inputs.Output_option_Q
-%                           Inputs.Output_option_S
-%                           Inputs.Output_option_phi
-%                           Inputs.Output_option_I
-%                           Inputs.Output_option_P_flow
-%                           Inputs.Output_option_Q_flow
-%                           Inputs.Output_option_S_flow
-%                           Inputs.Output_option_T_vector
-%                           Inputs.Output_option_Sin_Info
-%                           Inputs.Output_Path
-%                           Inputs.Output_Name  
-%                           Inputs.Data_Path
-%                           Inputs.Inputs_Path
-%                           Inputs.Outputs_Path
-%                           Inputs.VerSincal
-%                           Inputs.ParrallelCom
-%                           Inputs.NumelCores               (optional)
-%                           Inputs.waitbar_activ            (optional)
-%   Flowchart:
+%   Inputs  - Structure with all necessary inputs:
 %
-%                   1. Clear start
-%                   2. Path and directory preparation
-%                   3. Load the load profiles
-%                   4. Load static input (e.q. column names in a database)
-%                   5. Prepare the Sincal grid
-%                   6. Link between load profile and load in Sincal grid
-%                   7. Setup customization
-%                   8. Create schema.ini file
-%                   9. Adjustment of load profiles
-%                   10. Start parallel pool (for parallel computing)
-%                   11. Load flow calculation with load profiles
-%                   12. Delete overhead
+% 		Inputs.Grid_Path   						(required)
+% 		Inputs.Grid_Name   						(required)
+% 		Inputs.LP_DB_Path  						(required)
+% 		Inputs.LP_DB_Type  						(required)
+% 		Inputs.LP_DB_Name  						(required)
+% 		Inputs.LP_dist_type						(required)
+% 		Inputs.PV_DB_Path  						(required)
+% 		Inputs.PV_DB_Type  						(required)
+% 		Inputs.PV_DB_Name  						(required)
+% 		Inputs.PV_dist_type						(required)
+% 		Inputs.VerSincal   						(required)
+% 		Inputs.ParrallelCom						(required)
+% 		Inputs.NumelCores  						(required)
+% 		Inputs.Outputs_Path						(required)
+% 		
+% 		Inputs.LP_dist_path                 	(required if LP_dist_type 'list')
+% 		Inputs.LP_dist_list_name            	(required if LP_dist_type 'list')
+% 		Inputs.PV_dist_path                 	(required if PV_dist_type 'list')
+% 		Inputs.PV_dist_list_name            	(required if PV_dist_type 'list')
+%
+% 		Inputs.Output_option_U              	(optional)
+% 		Inputs.Output_option_P              	(optional)
+% 		Inputs.Output_option_Q              	(optional)
+% 		Inputs.Output_option_S              	(optional)
+% 		Inputs.Output_option_phi            	(optional)
+% 		Inputs.Output_option_I              	(optional)
+% 		Inputs.Output_option_P_flow         	(optional)
+% 		Inputs.Output_option_Q_flow         	(optional)
+% 		Inputs.Output_option_S_flow         	(optional)
+% 		Inputs.Output_option_Sin_Info       	(optional)
+% 		Inputs.Output_option_raw            	(optional)
+% 		Inputs.Output_option_raw_only       	(optional)
+% 		Inputs.Output_option_per_node_branch	(optional)
+% 		Inputs.Output_option_per_unit       	(optional)
+% 		Inputs.Output_option_Sin_Info       	(optional)
+% 		Inputs.Output_option_del_temp_files 	(optional)
+% 		Inputs.Output_option_preparation    	(optional)
+% 		Inputs.waitbar_activ                	(optional)
+% 		Inputs.Temp_Sim_Path                	(optional)
+%
+%   Basic Flowchart:
+%
+%       1. Path and directory preparation
+%       2. Setting preperation
+%       3. Prepare sincal grid and get the info about the grid
+%       4. Load the load and photovoltaic (PV) profiles
+%       5. Preparing the profiles as txt files to be read in into Sincal
+%       6. Make copys of the Sincal grid & Put txt file of profiles to database
+%       7. Load flow calculation with load profiles
+%       8. Read out database table values into txt files
+%       9. Output preperation
+%      10. Save Simulation Details
 %
 %
 % Author(s): R. Brandalik
@@ -111,12 +104,6 @@ Temp_Input_Path  = [Settings.Temp_Sim_Path, 'InputFiles\'  ];  % Path for simula
 Temp_Output_Path = [Settings.Temp_Sim_Path, 'OutputFiles\' ];  % Path for simulation temp. Output Files
 Temp_Grids_Path  = [Settings.Temp_Sim_Path, 'Grids\'       ];  % Path for simulation temp. copies of Grids
 
-%% TODO: Not clear
-
-if ~Settings.Output_option_preparation
-    Settings.Output_option_del_temp_files = false;
-end
-
 %% Estimating time for waitbar
 
 if waitbar_activ
@@ -135,7 +122,7 @@ if waitbar_activ
 end
 % Optional TODO: Integrate Waitbar in GUI figure (not working/finished)
 
-%% Setting up Time Vector (TODO)
+%% Setting up Time Vector (TODO: Implement in future)
 
 % Default values
 % TimeSetup = struct;
@@ -156,21 +143,15 @@ mkdir(Temp_Input_Path );
 mkdir(Temp_Output_Path);
 mkdir(Temp_Grids_Path );
 
-%% Load static input (e.q. column names of tables in sincal database)
+%% Get and set static input (e.q. column names of tables in sincal database)
 
-% Column names of Table ULFNodeRes und ULFBranchRes
-% load([pwd, '\Data\Static_Input\Col_Name_ULFNodeResult.mat'  ], 'Col_Name_ULFNodeResult'  ); % TODO: Delete this files
-% load([pwd, '\Data\Static_Input\Col_Name_ULFBranchResult.mat'], 'Col_Name_ULFBranchResult'); % TODO: Delete this files
-% load([pwd, '\Data\Static_Input\Col_Name_OpSer.mat'          ], 'Col_Name_OpSer'          ); % TODO: Delete this files
-% load([pwd, '\Data\Static_Input\Col_Name_OpSerVal.mat'       ], 'Col_Name_OpSerVal'       ); % TODO: Delete this files
-
-NodeResVariables   = calcNodeOutputVector  (Settings);
-BranchResVariables = calcBranchOutputVector(Settings);
+NodeResVariables   = getNodeResVariables  (Settings);
+BranchResVariables = getBranchResVariables(Settings);
 
 DB_Name = 'database';
 DB_Type = '.mdb'    ;
 
-%% Prepare the a copy of sincal grid and get the Info about the grid
+%% Prepare a copy of sincal grid and get the Info about the grid
 
 if waitbar_activ; waitbar(wb_stat(2), wb_Fig, 'Preparing Sincal Grid'); end % Waitbar Update
 
@@ -195,11 +176,9 @@ switch Settings.LP_DB_Type     % Loading Load Profiles Database
         temp_field    = fields(Load_Profiles);
         Load_Profiles = Load_Profiles.(temp_field{:});
     case 'AAPD'
-        error('Database Type not yet implemented.');    % TODO
+        error('Database Type not yet implemented.'); % (TODO: Implement in future)
 %         Load_Profiles = generate_AAPD_LPs(numel(SinInfo.Load.Element_ID),'1P','PLC_Tool',TimeSetup.Time_Step);
-%         Output_Filename = [Grid_Name,'_AAPD_LP_DB.mat'];
-%         SimData_Filename = [Outputs_Path,Output_Filename];
-%         save(SimData_Filename,'Load_Profiles','-v7.3');
+%         save([Outputs_Path,Grid_Name,'_AAPD_LP_DB.mat'],'Load_Profiles','-v7.3');
     otherwise
         error('Unknown Database Type.');
 end
@@ -266,15 +245,15 @@ end
 TimeSetup.num_of_instants = unique(num_steps_Profiles);
 
 Profile_DB = struct;        % Profile_DB - Database with all profiles    
-for k = 1:size(LP2GL_Lo,1)  % Load Profiles
+for k = 1:size(LP2GL_Lo, 1) % Load Profiles
     if ismember(           LP2GL_Lo.Load_Profile(k), fields_names_LoP)
-        Profile_DB.(       LP2GL_Lo.Load_Profile{k}) = ...
+        Profile_DB.       (LP2GL_Lo.Load_Profile{k}) = ...
             Load_Profiles.(LP2GL_Lo.Load_Profile{k})(1 : TimeSetup.num_of_instants, :);
     end
 end
-for k = 1:size(LP2GL_Pv,1)  % DCInfedder Profiles
+for k = 1:size(LP2GL_Pv, 1) % DCInfedder Profiles
     if ismember(           LP2GL_Pv.Load_Profile(k), fields_names_PvP)
-        Profile_DB.(       LP2GL_Pv.Load_Profile{k}) = ...
+        Profile_DB.       (LP2GL_Pv.Load_Profile{k}) = ...
             PV___Profiles.(LP2GL_Pv.Load_Profile{k})(1 : TimeSetup.num_of_instants, :);
     end
 end
@@ -451,7 +430,7 @@ else
 end
 
 % It seems that sometimes it is mor sable to restart parallel pool
-% poolobj = gcp('nocreate'); delete(poolobj); parpool('local',Settings.NumelCores);
+% poolobj = gcp('nocreate'); delete(poolobj); parpool('local', Settings.NumelCores);
 
 %% Read out database table values into txt files
 
@@ -462,101 +441,93 @@ Column_str_Branch = strjoin(BranchResVariables, ', '); % Sql command part that c
 
 Done_all = false(num_grids, 1);     % If some executions fail in parrallel, they will be done without parralel
 if Settings.ParrallelCom == false   % Not parralel
-    for k_grid = 1:num_grids % over all grids
+    for k_grid = 1 : num_grids % over all grids
         if ~Done_all(k_grid)
             File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];  
             Done_all(k_grid) = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch);
         end
     end
 else
-    parfor k_grid = 1:num_grids % over all grids
+    parfor k_grid = 1 : num_grids % over all grids
         if ~Done_all(k_grid)
             File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];  
             Done_all(k_grid) = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch);
         end
     end
 end
-% poolobj = gcp('nocreate');
-% delete(poolobj)
 
-%% second try Database2Txt (to improve), not parallel
+% It seems that sometimes it is mor sable to restart parallel pool
+% poolobj = gcp('nocreate'); delete(poolobj); parpool('local', Settings.NumelCores);
 
-% for k_grid = 1:num_grids % second try ... to improve
-%     if ~Done_all(k_grid)
-%         SinName         = [Grid_Name,'_',num2str(instants_per_grid),'inst_',num2str(k_grid)          ];
-%         Done_all(k_grid) = create_txt_output(SinName, Temp_Grids_Path, Column_str_Node, Column_str_Branch, Temp_Output_Path);
-%     end
-% end
+%% Second try Database2Txt, not parallel (fall-back solution)
+
+for k_grid = 1 : num_grids % over all grids
+    if ~Done_all(k_grid)
+        File_suffix = ['_', num2str(instants_per_grid), 'inst_', num2str(k_grid)];
+        Done_all(k_grid) = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch);
+    end
+end
 
 %% Output preperation
 
 if Settings.Output_option_preparation
-    % Waitbar Update
-    if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Preparing Power Flow results for analysis'); end
-    for k = 1 : 2   % TODO Made it over parfor?
-        if k == 1
-            Output_read_NodeRes(Outputs_Path,Temp_Output_Path,Grid_Name,instants_per_grid,num_grids,SinInfo,Grid_Name,Settings);
-        else
-            Output_read_BranchRes(Outputs_Path,Temp_Output_Path,Grid_Name,instants_per_grid,num_grids,SinInfo,Grid_Name,Settings);
+    if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Preparing Power Flow results for analysis'); end % Waitbar Update
+    if Settings.ParrallelCom == false % Not parralel
+        for    k_Type = 1 : 2
+            switch k_Type
+                case 1; Output_read_NodeRes  (Outputs_Path, Temp_Output_Path, Grid_Name, instants_per_grid, num_grids, SinInfo, Settings);
+                case 2; Output_read_BranchRes(Outputs_Path, Temp_Output_Path, Grid_Name, instants_per_grid, num_grids, SinInfo, Settings);
+            end
+        end
+    else
+        parfor k_Type = 1 : 2
+            switch k_Type
+                case 1; Output_read_NodeRes  (Outputs_Path, Temp_Output_Path, Grid_Name, instants_per_grid, num_grids, SinInfo, Settings);
+                case 2; Output_read_BranchRes(Outputs_Path, Temp_Output_Path, Grid_Name, instants_per_grid, num_grids, SinInfo, Settings);
+            end
         end
     end
-%     if Output_options.T_vector
+    if Settings.Output_option_Sin_Info
+        SimData_Filename = [Outputs_Path, Grid_Name, '_Grid_Info.mat'];
+        SinInfo_Bytes    = whos('SinInfo');
+        SinInfo_Bytes    = SinInfo_Bytes.bytes;
+        if SinInfo_Bytes > 2 * 1024^3 ; save(SimData_Filename,'SinInfo', '-v7.3' );
+        else                          ; save(SimData_Filename,'SinInfo'          ); end
+    end
+%     if Output_options.T_vector % (TODO: Implement in future)
 %         Output_Filename = [Output_Name,'_Time_Vector.mat'];
 %         SimData_Filename = [Outputs_Path,Output_Filename];
 %         save(SimData_Filename,'Time_Vector','-v7.3');
 %     end
-    if Settings.Output_option_Sin_Info
-        Output_Filename  = [Grid_Name,'_Grid_Info.mat'];
-        SimData_Filename = [Outputs_Path,Output_Filename];
-        SinInfo_Bytes = whos('SinInfo');
-        SinInfo_Bytes = SinInfo_Bytes.bytes;
-        if SinInfo_Bytes > 2 * 1024^3 ; save(SimData_Filename,'SinInfo','-v7.3' );
-        else                          ; save(SimData_Filename,'SinInfo'         ); end
-    end
-else
-    % Waitbar Update
-    if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Copying NodeRes and BranchRes files'); end
-    files = [Temp_Output_Path,'NodeRes*'  ]; copyfile(files,Outputs_Path);
-    files = [Temp_Output_Path,'BranchRes*']; copyfile(files,Outputs_Path);
+else % If no output preperation is wanted just copy the txt files. 
+    if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Copying NodeRes and BranchRes files'); end % Waitbar Update
+    files = [Temp_Output_Path, 'NodeRes*'  ]; copyfile(files, Outputs_Path);
+    files = [Temp_Output_Path, 'BranchRes*']; copyfile(files, Outputs_Path);
 end
 
-%% Save all Simulation Details (Parameters)
+%% Save Simulation Details (Parameters)
 
 if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Saving Simulation Details'); end % Waitbar Update
 
-SimDetails                                  = struct                        ;
-SimDetails.Grid_Name                        = Grid_Name                     ;
+SimDetails                                  = Settings                      ;
 SimDetails.instants_per_grid                = instants_per_grid             ;
 SimDetails.num_grids                        = num_grids                     ;
 SimDetails.SinInfo                          = SinInfo                       ;
-SimDetails.Grid_Name                        = Grid_Name                     ;
-SimDetails.Output_Name                      = Grid_Name                     ;
-SimDetails.Outputs_Path                     = Outputs_Path                  ;
-SimDetails.LoadProfiles_type                = Settings.LP_DB_Type           ;
-SimDetails.PVProfiles_type                  = Settings.PV_DB_Type           ;
-SimDetails.LoadProfiles_Distrubution_method = Settings.LP_dist_type         ;
-SimDetails.PVProfiles_Distrubution_method   = Settings.PV_dist_type         ;
-SimDetails.LoadProfiles_Dist_ListName_Input = Settings.LP_dist_list_name    ;
-SimDetails.PVProfiles_Dist_ListName_Input   = Settings.PV_dist_list_name    ;
 SimDetails.LoadProfiles_Distribution_List   = LP2GL_Lo                      ;
 SimDetails.PVProfiles_Distribution_List     = LP2GL_Pv                      ;
-SimDetails.LoadProfiles_Database_Name       = Settings.LP_DB_Name           ;
-SimDetails.PVProfiles_Database_Name         = Settings.PV_DB_Name           ;
-SimDetails.Output_content                   = Settings                      ;
-SimDetails.SimType                          = 'PF'                          ; %#ok % Will be just saved
-% SimDetails.First_Moment                   = TimeSetup.First_Moment        ;
+SimDetails.SimType                          = 'LC'                          ;
+% SimDetails.First_Moment                   = TimeSetup.First_Moment        ; % (TODO: Implement in future)
 % SimDetails.Last_Moment                    = TimeSetup.Last_Moment         ;
 % SimDetails.Time_Step                      = TimeSetup.Time_Step           ;
 % SimDetails.num_of_instants                = TimeSetup.num_of_instants     ;
 % SimDetails.Time_Vector                    = Time_Vector                   ;
 
-Output_Filename  = [Grid_Name, '_Simulation_Details.mat'];
-SimData_Filename = [Outputs_Path,Output_Filename];
+SimData_Filename = [Outputs_Path, Grid_Name, '_Simulation_Details.mat'];
 
 SimDetails_Bytes = whos('SimDetails');
 SimDetails_Bytes = SimDetails_Bytes.bytes;
-if   SimDetails_Bytes > 2 * 1024^3; save(SimData_Filename,'SimDetails','-v7.3');
-else                              ; save(SimData_Filename,'SimDetails')        ; end
+if   SimDetails_Bytes > 2 * 1024^3; save(SimData_Filename, 'SimDetails', '-v7.3');
+else                              ; save(SimData_Filename, 'SimDetails'         ); end
 
 %% Delete all temporary simulation files
 
@@ -568,12 +539,8 @@ end
 
 %% Delete Main Waitbar and finalising simulation process
 
-if waitbar_activ
-    waitbar(wb_stat(10), wb_Fig, 'Finishing');
-    delete(wb_Fig);
-end
+if waitbar_activ; waitbar(wb_stat(10), wb_Fig, 'Finishing'); delete(wb_Fig); end
 disp('Simulation completed');
-
 status = true;
 
 end
@@ -623,8 +590,9 @@ end
 
 function Done_this = create_txt_output(Grid_Name, Temp_Grids_Path, Temp_Output_Path, File_suffix, Column_str_Node, Column_str_Branch)
 sql_command_str = {... % Sql command for reading write a table as txt file
-    ['SELECT ', Column_str_Node  , ' INTO [Text;HDR=YES;DATABASE=', Temp_Output_Path,'].[NodeRes_'  , [Grid_Name, File_suffix], '.txt] FROM ULFNodeResult'  ];...
-    ['SELECT ', Column_str_Branch, ' INTO [Text;HDR=YES;DATABASE=', Temp_Output_Path,'].[BranchRes_', [Grid_Name, File_suffix], '.txt] FROM ULFBranchResult'] ...
+    ['SELECT ', Column_str_Node  , ' INTO [Text;HDR=YES;DATABASE=', Temp_Output_Path, '].[NodeRes_'  , [Grid_Name, File_suffix], '.txt] FROM ULFNodeResult'  ];...
+    ['SELECT ', Column_str_Branch, ' INTO [Text;HDR=YES;DATABASE=', Temp_Output_Path, '].[BranchRes_', [Grid_Name, File_suffix], '.txt] FROM ULFBranchResult'] ...
     };
-Done_this = Matlab2Access_ExecuteSQL(sql_command_str, 'database', [Temp_Grids_Path, Grid_Name, File_suffix, '_files'], '.mdb');
+skip_error = true;
+Done_this = Matlab2Access_ExecuteSQL(sql_command_str, 'database', [Temp_Grids_Path, Grid_Name, File_suffix, '_files'], '.mdb', skip_error);
 end
