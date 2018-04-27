@@ -1,4 +1,4 @@
-function Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type)
+function Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type, skip_error)
 % AccessDelValues - Delete all Values in Tab_Name Table from DB_Name
 %                   Database
 %
@@ -11,13 +11,15 @@ function Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type)
 %       DB_Type       (Optional) - String, Type of the database
 %                                - Allowed types: .accdb and .mdb 
 %                                - (default): '.accdb'     
+%       skip_error    (Optional) - Skip error if connection is wrong built
 %
 % RB, v2018.04.16
 
 %% Input check
 
-if nargin < 3;          DB_Path = [cd,'\'];       end	% Set the default path
-if nargin < 4;          DB_Type = '.accdb';       end	% Set the default database typ
+if nargin < 3;          DB_Path    = [cd,'\'];    end	% Set the default path
+if nargin < 4;          DB_Type    = '.accdb';    end	% Set the default database typ
+if nargin < 5;          skip_error = false;       end	% By default do not skip error
 if DB_Path(end) ~= '\'; DB_Path = [DB_Path,'\'];  end   % Correct the path if necessary
 if ischar(sql_in);      sql_in = cellstr(sql_in); end   % if sql-input is the class char 
     
@@ -44,7 +46,12 @@ while Done == false && k_try <= max_tries
     catch
         fprintf(['Execution try ',num2str(k_try),'/',num2str(max_tries),' in ',DB_Name,' was not successful.\n']);
         if k_try == max_tries
-            error(['Connection with ',DB_Name,' could not be created.']);
+            if ~skip_error
+                error(['Connection with ',DB_Name,' could not be created.']);
+            else
+                disp( ['Connection with ',DB_Name,' could not be created.']);
+                return;
+            end
         end
         k_try = k_try + 1;
     end
