@@ -3,7 +3,7 @@ function Output_read_NodeRes(Path_Output, Path_Input, SinNameBasic, instants_per
 % .mat database with chosen Power Flow result
 %
 % Author(s): P. Gassler, R. Brandalik
-%              
+              
 %% Import NodeRes Files in Matlab memory
 
 for k_grid = 1 : num_grids % Read in all NodeRes files
@@ -13,20 +13,13 @@ for k_grid = 1 : num_grids % Read in all NodeRes files
         ResData   = readtable(NodeRes_Name);
     else
         k_SimData = readtable(NodeRes_Name);
-        % ResTime auf Instanz anpassen
+        % Adjust ResTime based on grid number
         k_SimData.ResTime = k_SimData.ResTime + (k_grid - 1) * instants_per_grid;
         ResData = [ResData; k_SimData]; %#ok The size of the file is unknown
         clear k_SimData                 % To reduce RAM usage
     end
     disp([NodeRes_Name, ' loaded.']);
 end
-
-%% Temp for tests (TODO)
-
-% ResData(ResData.Node_ID == 3,:) = [];
-% ResData(ResData.Node_ID == 5,:) = [];
-% ResData(ResData.ResTime == 7,:) = [];
-% ResData(ResData.ResTime == 9,:) = [];
 
 %% Fill missing timesteps (load flow did not converge) and isolated nodes
 
@@ -53,11 +46,18 @@ ResData = [ResData; NaN_Table_Steps; NaN_Table_Nodes];
 ResData = sortrows(ResData,'Node_ID','ascend');
 ResData = sortrows(ResData,'ResTime','ascend');
 
+%% Add Node_Name
+
+for k_Node = 1 : numel(Node_all)
+    Node_ID_flag = (ResData.Node_ID == SinInfo.Node.Node_ID(k_Node));
+    ResData.Node_Name(Node_ID_flag) =  SinInfo.Node.Name   (k_Node) ;
+end
+
 %% Saving only RAW data in a file and leaving function
 
-if Settings.Output_option_raw_only
+if Settings.Output_option_raw_only || Settings.Output_option_raw
     SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw.mat'];
-    NodeRes_all = ResData; clear ResData; %#ok Change name, the variable will just be saved
+    NodeRes_all = ResData; clear ResData; % Change name, the variable will just be saved
     NodeRes_all_Bytes = whos('NodeRes_all');
     NodeRes_all_Bytes = NodeRes_all_Bytes.bytes;
     if NodeRes_all_Bytes > 2 * 1024^3
@@ -65,18 +65,7 @@ if Settings.Output_option_raw_only
     else
         save(SimData_Filename,'NodeRes_all');
     end
-    return
-elseif Settings.Output_option_raw % Saving RAW data in a file
-    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw.mat'];
-    NodeRes_all = ResData; %#ok, the variable will just be saved
-    NodeRes_all_Bytes = whos('NodeRes_all');
-    NodeRes_all_Bytes = NodeRes_all_Bytes.bytes;
-    if NodeRes_all_Bytes > 2 * 1024^3
-        save(SimData_Filename,'NodeRes_all','-v7.3');
-    else
-        save(SimData_Filename,'NodeRes_all');
-    end
-    clear NodeRes_all; % To reduce RAM usage
+    if Settings.Output_option_raw_only; return; end
 end
 
 %% Read out flag and make column name translator
@@ -138,29 +127,36 @@ NodeVarNames = strrep(                                              ...
 
 %% Assemble variables per units and nodes
 
-ResData.ResTime = []; % To reduce RAM usage
-
-SimResults_Nodes_per_units = struct; % initial
-SimResults_Nodes_per_nodes = struct; % initial
+NodeRes_all.ResTime = []; % To reduce RAM usage
 
 for k_flag = 1 : size(all_flag, 1)
     for k_Node = 1 : numel(Node_IDs)
+        if Settings.Output_option_per_unit || Settings.Output_option_per_node_branch
+            Values_flag_Node = ...
+                NodeRes_all.((all_flag{k_flag, 1}))(NodeRes_all.Node_ID == Node_IDs(k_Node));
+        end
         if Settings.Output_option_per_unit
+            if k_flag == 1 && k_Node == 1
+                SimResults_Nodes_per_units = struct; % initial
+            end
             if k_Node == 1 % initial as table
                 SimResults_Nodes_per_units.(all_flag{k_flag, 2}) = table;
             end
             SimResults_Nodes_per_units.(all_flag{k_flag, 2}).(NodeVarNames{k_Node}) = ...
-                ResData.((all_flag{k_flag, 1}))(ResData.Node_ID == Node_IDs(k_Node));
+                Values_flag_Node;
         end
         if Settings.Output_option_per_node_branch
+            if k_flag == 1 && k_Node == 1
+                SimResults_Nodes_per_nodes = struct; % initial
+            end
             if k_flag == 1 % initial as table
                 SimResults_Nodes_per_nodes.(NodeNames{k_Node}) = table;
             end
             SimResults_Nodes_per_nodes.(NodeNames{k_Node}).(all_flag{k_flag, 2}) = ...
-                ResData.((all_flag{k_flag, 1}))(ResData.Node_ID == Node_IDs(k_Node));
+                Values_flag_Node;
         end
     end
-    ResData.((all_flag{k_flag, 1})) = []; % To reduce RAM usage
+    NodeRes_all.((all_flag{k_flag, 1})) = []; % To reduce RAM usage
 end
 
 %% Saving the results in .mat files
