@@ -1,6 +1,6 @@
-function LPC_Tool_GUI_Output(f)
-%%
+% function LPC_Tool_GUI_Output(f)
 %
+%   % (TODO: Implement in future)
 %
 %
 
