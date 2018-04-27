@@ -88,9 +88,9 @@ SimData_ID_down.Terminal1_ID = []; SimData_ID_down.Terminal2_ID = [];
 
 %% Saving only RAW data in a file and leaving function
 
+BranchRes_all = ResData; clear ResData; % Change name, the variable will just be saved
 if Settings.Output_option_raw_only || Settings.Output_option_raw
     SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_raw.mat'];
-    BranchRes_all = ResData; clear ResData; % Change name, the variable will just be saved
     BranchRes_all_Bytes = whos('BranchRes_all');
     BranchRes_all_Bytes = BranchRes_all_Bytes.bytes;
     if BranchRes_all_Bytes > 2 * 1024^3
@@ -108,6 +108,10 @@ SimData_ID_up   = BranchRes_all(BranchRes_all.Terminal1_ID < BranchRes_all.Termi
 SimData_ID_down = BranchRes_all(BranchRes_all.Terminal1_ID > BranchRes_all.Terminal2_ID,:);
 
 clear BranchRes_all;  % To reduce RAM usage
+
+% clear useless data to save space
+SimData_ID_up.  Terminal1_ID = []; SimData_ID_up.  Terminal2_ID = [];
+SimData_ID_down.Terminal1_ID = []; SimData_ID_down.Terminal2_ID = [];
 
 %% Read out flag and make column name translator
 
@@ -206,22 +210,26 @@ clear SimData_ID_down SimData_ID_up % To reduce RAM usage
 if Settings.Output_option_per_unit
     SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_per_units.mat'];
     SimResults_Branches_per_units_Bytes = whos('SimResults_Branches_per_units');
-    SimResults_Branches_per_units_Bytes = SimResults_Branches_per_units_Bytes.bytes; % The variable will just be saved
-    if SimResults_Branches_per_units_Bytes > 2 * 1024^3
-        save(SimData_Filename, 'SimResults_Branches_per_units', '-v7.3');
-    else
-        save(SimData_Filename, 'SimResults_Branches_per_units'         );        
+    if ~isempty(SimResults_Branches_per_units_Bytes)
+        SimResults_Branches_per_units_Bytes = SimResults_Branches_per_units_Bytes.bytes; % The variable will just be saved
+        if SimResults_Branches_per_units_Bytes > 2 * 1024^3
+            save(SimData_Filename, 'SimResults_Branches_per_units', '-v7.3');
+        else
+            save(SimData_Filename, 'SimResults_Branches_per_units'         );
+        end
+        disp([SimData_Filename, ' saved.']);
     end
-    disp([SimData_Filename, ' saved.']);
 end
 if Settings.Output_option_per_node_branch
     SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_per_branches.mat'];
     SimResults_Branches_per_branches_Bytes = whos('SimResults_Branches_per_units');
-    SimResults_Branches_per_branches_Bytes = SimResults_Branches_per_branches_Bytes.bytes; % The variable will just be saved    
-    if SimResults_Branches_per_branches_Bytes > 2 * 1024^3
-        save(SimData_Filename, 'SimResults_Branches_per_branches', '-v7.3');
-    else
-        save(SimData_Filename, 'SimResults_Branches_per_branches'         );
+    if ~isempty(SimResults_Branches_per_branches_Bytes)
+        SimResults_Branches_per_branches_Bytes = SimResults_Branches_per_branches_Bytes.bytes; % The variable will just be saved
+        if SimResults_Branches_per_branches_Bytes > 2 * 1024^3
+            save(SimData_Filename, 'SimResults_Branches_per_branches', '-v7.3');
+        else
+            save(SimData_Filename, 'SimResults_Branches_per_branches'         );
+        end
+        disp([SimData_Filename, ' saved.']);
     end
-    disp([SimData_Filename, ' saved.']);
 end

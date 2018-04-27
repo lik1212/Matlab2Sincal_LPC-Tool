@@ -55,9 +55,9 @@ end
 
 %% Saving only RAW data in a file and leaving function
 
+NodeRes_all = ResData; clear ResData; % Change name, the variable will just be saved
 if Settings.Output_option_raw_only || Settings.Output_option_raw
     SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw.mat'];
-    NodeRes_all = ResData; clear ResData; % Change name, the variable will just be saved
     NodeRes_all_Bytes = whos('NodeRes_all');
     NodeRes_all_Bytes = NodeRes_all_Bytes.bytes;
     if NodeRes_all_Bytes > 2 * 1024^3
@@ -164,22 +164,26 @@ end
 if Settings.Output_option_per_unit
     SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_units.mat'];
     SimResults_Nodes_per_units_Bytes = whos('SimResults_Nodes_per_units');
-    SimResults_Nodes_per_units_Bytes = SimResults_Nodes_per_units_Bytes.bytes; % The variable will just be saved
-    if SimResults_Nodes_per_units_Bytes > 2 * 1024^3
-        save(SimData_Filename, 'SimResults_Nodes_per_units', '-v7.3');
-    else
-        save(SimData_Filename, 'SimResults_Nodes_per_units'         );
+    if ~isempty(SimResults_Nodes_per_units_Bytes)
+        SimResults_Nodes_per_units_Bytes = SimResults_Nodes_per_units_Bytes.bytes; % The variable will just be saved
+        if SimResults_Nodes_per_units_Bytes > 2 * 1024^3
+            save(SimData_Filename, 'SimResults_Nodes_per_units', '-v7.3');
+        else
+            save(SimData_Filename, 'SimResults_Nodes_per_units'         );
+        end
+        disp([SimData_Filename, ' saved.']);
     end
-    disp([SimData_Filename, ' saved.']);
 end
 if Settings.Output_option_per_node_branch
     SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_nodes.mat'];
     SimResults_Nodes_per_nodes_Bytes = whos('SimResults_Nodes_per_nodes');
-    SimResults_Nodes_per_nodes_Bytes = SimResults_Nodes_per_nodes_Bytes.bytes; % The variable will just be saved
-    if SimResults_Nodes_per_nodes_Bytes > 2 * 1024^3  
-        save(SimData_Filename, 'SimResults_Nodes_per_nodes', '-v7.3');
-    else
-        save(SimData_Filename, 'SimResults_Nodes_per_nodes'         );
+    if ~isempty(SimResults_Nodes_per_nodes_Bytes)
+        SimResults_Nodes_per_nodes_Bytes = SimResults_Nodes_per_nodes_Bytes.bytes; % The variable will just be saved
+        if SimResults_Nodes_per_nodes_Bytes > 2 * 1024^3
+            save(SimData_Filename, 'SimResults_Nodes_per_nodes', '-v7.3');
+        else
+            save(SimData_Filename, 'SimResults_Nodes_per_nodes'         );
+        end
+        disp([SimData_Filename, ' saved.']);
     end
-    disp([SimData_Filename, ' saved.']);
 end
