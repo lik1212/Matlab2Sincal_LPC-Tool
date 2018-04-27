@@ -163,8 +163,16 @@ DB__PathCopy = [Temp_Input_Path , Grid_NameEmpty , '_files\'];
 copyfile(GridNameMain, GridNameCopy); % copy the sincal file
 copyfile(DB__PathMain, DB__PathCopy); % copy the sincal Grid folder with database
 
-% Get Grind basic information (nodes,lines,loads,etc.)
-SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty,Temp_Input_Path);   % TODO, maybe better position in Code
+%% Get Grind basic information (nodes, lines, loads,etc.)
+
+SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty, Temp_Input_Path); % TODO, maybe better position in Code
+if Settings.Output_option_Sin_Info
+    SimData_Filename = [Outputs_Path, Grid_Name, '_Grid_Info.mat'];
+    SinInfo_Bytes    = whos('SinInfo');
+    SinInfo_Bytes    = SinInfo_Bytes.bytes;
+    if SinInfo_Bytes > 2 * 1024^3 ; save(SimData_Filename,'SinInfo', '-v7.3' );
+    else                          ; save(SimData_Filename,'SinInfo'          ); end
+end
 
 %% Load the load and photovoltaic (PV) profiles
 
@@ -287,14 +295,36 @@ end
 instants_per_grid = TimeSetup.instants_per_grid; % shorter name
 num_grids         = ceil(TimeSetup.num_of_instants/instants_per_grid); % Number of necessary grids
 
+%% Save Simulation Details (Parameters)
+
+SimDetails                                  = Settings                      ;
+SimDetails.instants_per_grid                = instants_per_grid             ;
+SimDetails.num_grids                        = num_grids                     ;
+SimDetails.SinInfo                          = SinInfo                       ;
+SimDetails.LoadProfiles_Distribution_List   = LP2GL_Lo                      ;
+SimDetails.PVProfiles_Distribution_List     = LP2GL_Pv                      ;
+SimDetails.SimType                          = 'LC'                          ;
+% SimDetails.First_Moment                   = TimeSetup.First_Moment        ; % (TODO: Implement in future)
+% SimDetails.Last_Moment                    = TimeSetup.Last_Moment         ;
+% SimDetails.Time_Step                      = TimeSetup.Time_Step           ;
+% SimDetails.num_of_instants                = TimeSetup.num_of_instants     ;
+% SimDetails.Time_Vector                    = Time_Vector                   ;
+
+SimData_Filename = [Outputs_Path, Grid_Name, '_Simulation_Details.mat'];
+
+SimDetails_Bytes = whos('SimDetails');
+SimDetails_Bytes = SimDetails_Bytes.bytes;
+if   SimDetails_Bytes > 2 * 1024^3; save(SimData_Filename, 'SimDetails', '-v7.3');
+else                              ; save(SimData_Filename, 'SimDetails'         ); end
+
 %% Add Profile ID to the associated grid element (Load/DCInfeeder)
 
 if waitbar_activ; waitbar(wb_stat(4), wb_Fig, 'Add profile IDs to the associated grid element'); end % Waitbar Update
 
 % Add an ID (Primary key) to the profiles (to the LoadProfile_Info table)
 LoadProfile_Info = table;              	
-LoadProfile_Info.ProfileName    (:) = fieldnames(Profile_DB);
-LoadProfile_Info.Load_Profile_ID(:) = 1 : size(LoadProfile_Info,1);
+LoadProfile_Info.ProfileName     = fieldnames(Profile_DB);
+LoadProfile_Info.Load_Profile_ID = double(1 : size(LoadProfile_Info,1))';
 
 for k_Type = 1 : 2
     switch k_Type
@@ -487,13 +517,6 @@ if Settings.Output_option_preparation
             end
         end
     end
-    if Settings.Output_option_Sin_Info
-        SimData_Filename = [Outputs_Path, Grid_Name, '_Grid_Info.mat'];
-        SinInfo_Bytes    = whos('SinInfo');
-        SinInfo_Bytes    = SinInfo_Bytes.bytes;
-        if SinInfo_Bytes > 2 * 1024^3 ; save(SimData_Filename,'SinInfo', '-v7.3' );
-        else                          ; save(SimData_Filename,'SinInfo'          ); end
-    end
 %     if Output_options.T_vector % (TODO: Implement in future)
 %         Output_Filename = [Output_Name,'_Time_Vector.mat'];
 %         SimData_Filename = [Outputs_Path,Output_Filename];
@@ -504,30 +527,6 @@ else % If no output preperation is wanted just copy the txt files.
     files = [Temp_Output_Path, 'NodeRes*'  ]; copyfile(files, Outputs_Path);
     files = [Temp_Output_Path, 'BranchRes*']; copyfile(files, Outputs_Path);
 end
-
-%% Save Simulation Details (Parameters)
-
-if waitbar_activ; waitbar(wb_stat(9), wb_Fig, 'Saving Simulation Details'); end % Waitbar Update
-
-SimDetails                                  = Settings                      ;
-SimDetails.instants_per_grid                = instants_per_grid             ;
-SimDetails.num_grids                        = num_grids                     ;
-SimDetails.SinInfo                          = SinInfo                       ;
-SimDetails.LoadProfiles_Distribution_List   = LP2GL_Lo                      ;
-SimDetails.PVProfiles_Distribution_List     = LP2GL_Pv                      ;
-SimDetails.SimType                          = 'LC'                          ;
-% SimDetails.First_Moment                   = TimeSetup.First_Moment        ; % (TODO: Implement in future)
-% SimDetails.Last_Moment                    = TimeSetup.Last_Moment         ;
-% SimDetails.Time_Step                      = TimeSetup.Time_Step           ;
-% SimDetails.num_of_instants                = TimeSetup.num_of_instants     ;
-% SimDetails.Time_Vector                    = Time_Vector                   ;
-
-SimData_Filename = [Outputs_Path, Grid_Name, '_Simulation_Details.mat'];
-
-SimDetails_Bytes = whos('SimDetails');
-SimDetails_Bytes = SimDetails_Bytes.bytes;
-if   SimDetails_Bytes > 2 * 1024^3; save(SimData_Filename, 'SimDetails', '-v7.3');
-else                              ; save(SimData_Filename, 'SimDetails'         ); end
 
 %% Delete all temporary simulation files
 
