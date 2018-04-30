@@ -43,15 +43,15 @@ NaN_Table_Nodes.ResTime = repmat (Step_all , numel(Node_lack), 1);
 NaN_Table_Nodes.Node_ID = repelem(Node_lack, numel(Step_all) , 1);
 
 ResData = [ResData; NaN_Table_Steps; NaN_Table_Nodes];
-ResData = sortrows(ResData,'Node_ID','ascend');
-ResData = sortrows(ResData,'ResTime','ascend');
+ResData = sortrows(ResData, 'Node_ID', 'ascend');
+ResData = sortrows(ResData, 'ResTime', 'ascend');
 
-%% Add Node_Name
+%% Add Node_Name (is not possible if the ResData has to much information)
 
-for k_Node = 1 : numel(Node_all)
-    Node_ID_flag = (ResData.Node_ID == SinInfo.Node.Node_ID(k_Node));
-    ResData.Node_Name(Node_ID_flag) =  SinInfo.Node.Name   (k_Node) ;
-end
+% for k_Node = 1 : numel(Node_all)
+%     Node_ID_flag = (ResData.Node_ID == SinInfo.Node.Node_ID(k_Node));
+%     ResData.Node_Name(Node_ID_flag) =  SinInfo.Node.Name   (k_Node) ;
+% end
 
 %% Saving only RAW data in a file and leaving function
 
