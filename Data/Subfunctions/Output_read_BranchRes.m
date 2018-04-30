@@ -86,7 +86,7 @@ end
 
 BranchRes_all = ResData; clear ResData; % Change name, the variable will just be saved
 if Settings.Output_option_raw_only || Settings.Output_option_raw
-    SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_raw.mat'];
+    SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_raw_', Settings.Timestamp, '.mat'];
     BranchRes_all_Bytes = whos('BranchRes_all');
     BranchRes_all_Bytes = BranchRes_all_Bytes.bytes;
     if BranchRes_all_Bytes > 2 * 1024^3
@@ -213,7 +213,7 @@ clear SimData_ID_down SimData_ID_up % To reduce RAM usage
 %% Saving the results in .mat files
 
 if Settings.Output_option_per_unit
-    SimData_Filename_ID_up = [Path_Output, SinNameBasic, '_BranchRes_per_units_ID_up.mat'];
+    SimData_Filename_ID_up = [Path_Output, SinNameBasic, '_BranchRes_per_units_ID_up_', Settings.Timestamp, '.mat'];
     SimResults_Branches_per_units_ID_up_Bytes = whos('SimResults_Branches_per_units_ID_up');
     if ~isempty(SimResults_Branches_per_units_ID_up_Bytes)
         SimResults_Branches_per_units_ID_up_Bytes = SimResults_Branches_per_units_ID_up_Bytes.bytes; % The variable will just be saved
@@ -226,7 +226,7 @@ if Settings.Output_option_per_unit
     end
     clear SimResults_Branches_per_units_ID_up % To reduce RAM usage
     
-    SimData_Filename_ID_down = [Path_Output, SinNameBasic, '_BranchRes_per_units_ID_down.mat'];
+    SimData_Filename_ID_down = [Path_Output, SinNameBasic, '_BranchRes_per_units_ID_down_', Settings.Timestamp, '.mat'];
     SimResults_Branches_per_units_ID_down_Bytes = whos('SimResults_Branches_per_units_ID_down');
     if ~isempty(SimResults_Branches_per_units_ID_down_Bytes)
         SimResults_Branches_per_units_ID_down_Bytes = SimResults_Branches_per_units_ID_down_Bytes.bytes; % The variable will just be saved
@@ -240,7 +240,7 @@ if Settings.Output_option_per_unit
     clear SimResults_Branches_per_units_ID_down % To reduce RAM usage
 end
 if Settings.Output_option_per_node_branch
-    SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_per_branches.mat'];
+    SimData_Filename = [Path_Output, SinNameBasic, '_BranchRes_per_branches_', Settings.Timestamp, '.mat'];
     SimResults_Branches_per_branches_Bytes = whos('SimResults_Branches_per_branches');
     if ~isempty(SimResults_Branches_per_branches_Bytes)
         SimResults_Branches_per_branches_Bytes = SimResults_Branches_per_branches_Bytes.bytes; % The variable will just be saved

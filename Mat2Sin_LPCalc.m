@@ -167,7 +167,7 @@ copyfile(DB__PathMain, DB__PathCopy); % copy the sincal Grid folder with databas
 
 SinInfo = Mat2Sin_GetSinInfo(Grid_NameEmpty, Temp_Input_Path); % TODO, maybe better position in Code
 if Settings.Output_option_Sin_Info
-    SimData_Filename = [Outputs_Path, Grid_Name, '_Grid_Info.mat'];
+    SimData_Filename = [Outputs_Path, Grid_Name, '_Grid_Info_', Settings.Timestamp, '.mat'];
     SinInfo_Bytes    = whos('SinInfo');
     SinInfo_Bytes    = SinInfo_Bytes.bytes;
     if SinInfo_Bytes > 2 * 1024^3 ; save(SimData_Filename,'SinInfo', '-v7.3' );
@@ -208,18 +208,18 @@ switch Settings.LP_dist_type
         LP2GL_Lo = readtable([Settings.LP_dist_path, Settings.LP_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
-        Settings.LP_dist_list_name = 'Load_Distribution_random.txt';
+        Settings.LP_dist_list_name = ['Load_Distribution_random_', Settings.Timestamp, '.txt'];
     case 'alphab'
         LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
-        Settings.LP_dist_list_name = 'Load_Distribution_alphabetical_order.txt';
+        Settings.LP_dist_list_name = ['Load_Distribution_alphabetical_order_', Settings.Timestamp, '.txt'];
     case 'DB_order'
         LP2GL_Lo = create_DistributionList(SinInfo, 'Load' ,fields_names_LoP, Settings.LP_dist_type);
-        Settings.LP_dist_list_name = 'Load_Distribution_database_order.txt';
+        Settings.LP_dist_list_name = ['Load_Distribution_database_order_', Settings.Timestamp, '.txt'];
     otherwise
         error('Unknown Distribution Type.');
 end
 % Save distribution list as output
-writetable(LP2GL_Lo,[Outputs_Path,Grid_Name,'_',Settings.LP_dist_list_name],'Delimiter',';');
+writetable(LP2GL_Lo, [Outputs_Path,Grid_Name, '_', Settings.LP_dist_list_name],'Delimiter',';');
 
 % Loading or Generating the distribution of the PV Profiles on the Grid PV
 switch Settings.PV_dist_type
@@ -227,18 +227,18 @@ switch Settings.PV_dist_type
         LP2GL_Pv     = readtable([Settings.PV_dist_path,Settings.PV_dist_list_name],'Delimiter',';');
     case 'random'
         LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
-        Settings.PV_dist_list_name = 'DCInfeeder_Distribution_random.txt';
+        Settings.PV_dist_list_name = ['DCInfeeder_Distribution_random_', Settings.Timestamp, '.txt'];
     case 'alphab'
         LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
-        Settings.PV_dist_list_name = 'DCInfeeder_Distribution_alphabetical_order.txt';
+        Settings.PV_dist_list_name = ['DCInfeeder_Distribution_alphabetical_order_', Settings.Timestamp, '.txt'];
     case 'DB_order'
         LP2GL_Pv = create_DistributionList(SinInfo, 'DCInfeeder' ,fields_names_PvP, Settings.PV_dist_type);
-        Settings.PV_dist_list_name = 'DCInfeeder_Distribution_database_order.txt';
+        Settings.PV_dist_list_name = ['DCInfeeder_Distribution_database_order_', Settings.Timestamp, '.txt'];
     otherwise
         error('Unknown Distribution Type.');
 end
 % Save distribution list as output
-writetable(LP2GL_Pv,[Outputs_Path,Grid_Name,'_',Settings.PV_dist_list_name],'Delimiter',';');
+writetable(LP2GL_Pv, [Outputs_Path,Grid_Name, '_', Settings.PV_dist_list_name],'Delimiter',';');
 
 %% Connect the load and PV profiles to one profile database 
 
@@ -310,7 +310,7 @@ SimDetails.SimType                          = 'LC'                          ;
 % SimDetails.num_of_instants                = TimeSetup.num_of_instants     ;
 % SimDetails.Time_Vector                    = Time_Vector                   ;
 
-SimData_Filename = [Outputs_Path, Grid_Name, '_Simulation_Details.mat'];
+SimData_Filename = [Outputs_Path, Grid_Name, '_Simulation_Details_', Settings.Timestamp, '.mat'];
 
 SimDetails_Bytes = whos('SimDetails');
 SimDetails_Bytes = SimDetails_Bytes.bytes;

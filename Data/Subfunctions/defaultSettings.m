@@ -38,4 +38,8 @@ for k_Opt = 1 : size(default_Options,1)
         Settings.(default_Options{k_Opt,1}) = default_Options{k_Opt,2};
     end
 end
+
+% Timestamp
+Settings.Timestamp = char(datetime('now','Format','yyMMdd_HH_mm_ss'));
+
 % TODO: Output_option_T_vector -> T_vector
