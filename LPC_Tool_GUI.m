@@ -1386,7 +1386,7 @@ else
 end    
 
 % Set Output path and filename
-f.Inputs.Output_Path = f.Main_Win.text_output_path_selection.String;
+f.Inputs.Outputs_Path = f.Main_Win.text_output_path_selection.String;
 if  f.Main_Win.checkbox_output_path_filename.Value == 0
     f.Inputs.Output_Name = f.Main_Win.edit_output_path_filename.String;
 end
