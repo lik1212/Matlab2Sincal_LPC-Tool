@@ -1,5 +1,5 @@
 function Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type, skip_error)
-% AccessDelValues - Execute the SQL Order sql_in in the Database
+% Matlab2Access_ExecuteSQL - Execute the SQL Order sql_in in a Database
 %
 %   Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type, skip_error)
 %
