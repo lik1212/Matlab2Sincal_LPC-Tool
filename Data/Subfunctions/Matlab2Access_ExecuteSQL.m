@@ -1,8 +1,7 @@
 function Done = Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type, skip_error)
-% AccessDelValues - Delete all Values in Tab_Name Table from DB_Name
-%                   Database
+% AccessDelValues - Execute the SQL Order sql_in in the Database
 %
-%   AccessDelValues(DB_Name,Tab_Name,DB_Path,DB_Type)
+%   Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB_Path, DB_Type, skip_error)
 %
 %       DB_Name       (Required) - String that defines the name of the DB
 %       Tab_Name      (Required) - String that defines the Table Name
