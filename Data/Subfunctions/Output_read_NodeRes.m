@@ -57,7 +57,7 @@ ResData = sortrows(ResData, 'ResTime', 'ascend');
 
 NodeRes_all = ResData; clear ResData; % Change name, the variable will just be saved
 if Settings.Output_option_raw_only || Settings.Output_option_raw
-    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw_', Settings.Timestamp, '.mat'];
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_raw_', Settings.ResultsSuffix, '.mat'];
     NodeRes_all_Bytes = whos('NodeRes_all');
     NodeRes_all_Bytes = NodeRes_all_Bytes.bytes;
     if NodeRes_all_Bytes > 2 * 1024^3
@@ -162,7 +162,7 @@ end
 %% Saving the results in .mat files
 
 if Settings.Output_option_per_unit
-    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_units_', Settings.Timestamp, '.mat'];
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_units_', Settings.ResultsSuffix, '.mat'];
     SimResults_Nodes_per_units_Bytes = whos('SimResults_Nodes_per_units');
     if ~isempty(SimResults_Nodes_per_units_Bytes)
         SimResults_Nodes_per_units_Bytes = SimResults_Nodes_per_units_Bytes.bytes; % The variable will just be saved
@@ -175,7 +175,7 @@ if Settings.Output_option_per_unit
     end
 end
 if Settings.Output_option_per_node_branch
-    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_nodes_', Settings.Timestamp, '.mat'];
+    SimData_Filename = [Path_Output, SinNameBasic, '_NodeRes_per_nodes_', Settings.ResultsSuffix, '.mat'];
     SimResults_Nodes_per_nodes_Bytes = whos('SimResults_Nodes_per_nodes');
     if ~isempty(SimResults_Nodes_per_nodes_Bytes)
         SimResults_Nodes_per_nodes_Bytes = SimResults_Nodes_per_nodes_Bytes.bytes; % The variable will just be saved

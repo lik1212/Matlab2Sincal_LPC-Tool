@@ -14,6 +14,7 @@ Inputs.PV_DB_Path         = [pwd, '\Inputs\PV_Profiles\'  ]; % Path for PV profi
 Inputs.PV_DB_Type         = 'DB'                           ;
 Inputs.PV_DB_Name         = 'RB_PV_Profiles.mat'           ;
 Inputs.PV_dist_type       = 'DB_order'                     ;
+Inputs.ResultsSuffix      = 'Initial'                      ; % Optional
 
 Inputs.VerSincal          = 14  ;
 Inputs.ParrallelCom       = true;
