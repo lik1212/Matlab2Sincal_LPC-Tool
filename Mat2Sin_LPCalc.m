@@ -254,15 +254,15 @@ TimeSetup.num_of_instants = unique(num_steps_Profiles);
 
 Profile_DB = struct;        % Profile_DB - Database with all profiles    
 for k = 1:size(LP2GL_Lo, 1) % Load Profiles
-    if ismember(           LP2GL_Lo.Load_Profile(k), fields_names_LoP)
-        Profile_DB.       (LP2GL_Lo.Load_Profile{k}) = ...
-            Load_Profiles.(LP2GL_Lo.Load_Profile{k})(1 : TimeSetup.num_of_instants, :);
+    if ismember(           LP2GL_Lo.Profile(k), fields_names_LoP)
+        Profile_DB.       (LP2GL_Lo.Profile{k}) = ...
+            Load_Profiles.(LP2GL_Lo.Profile{k})(1 : TimeSetup.num_of_instants, :);
     end
 end
 for k = 1:size(LP2GL_Pv, 1) % DCInfedder Profiles
-    if ismember(           LP2GL_Pv.Load_Profile(k), fields_names_PvP)
-        Profile_DB.       (LP2GL_Pv.Load_Profile{k}) = ...
-            PV___Profiles.(LP2GL_Pv.Load_Profile{k})(1 : TimeSetup.num_of_instants, :);
+    if ismember(           LP2GL_Pv.Profile(k), fields_names_PvP)
+        Profile_DB.       (LP2GL_Pv.Profile{k}) = ...
+            PV___Profiles.(LP2GL_Pv.Profile{k})(1 : TimeSetup.num_of_instants, :);
     end
 end
 clear Load_Profiles PV___Profiles k     % To reduce RAM usage
@@ -339,8 +339,8 @@ for k_Type = 1 : 2
     LP2GE_IDs.Element_ID = zeros(size(LP2GE_Names,1), 1);
     LP2GE_IDs.Profile_ID = zeros(size(LP2GE_Names,1), 1);
     for k_Ele = 1 : size(LP2GE_Names, 1) % Grid Element Name -> Grid Element ID -> Profile Name -> Profile ID
-        LP2GE_IDs.Element_ID(k_Ele) = SinInfo.(Element_Type).Element_ID(strcmp(SinInfo.(Element_Type).Name , LP2GE_Names.Grid_Load   {k_Ele}));
-        LP2GE_IDs.Profile_ID(k_Ele) = LoadProfile_Info.Load_Profile_ID (strcmp(LoadProfile_Info.ProfileName, LP2GE_Names.Load_Profile{k_Ele}));
+        LP2GE_IDs.Element_ID(k_Ele) = SinInfo.(Element_Type).Element_ID(strcmp(SinInfo.(Element_Type).Name , LP2GE_Names.Grid_Load{k_Ele}));
+        LP2GE_IDs.Profile_ID(k_Ele) = LoadProfile_Info.Load_Profile_ID (strcmp(LoadProfile_Info.ProfileName, LP2GE_Names.Profile  {k_Ele}));
     end
     sql_in = {['UPDATE ', Element_Type, ' SET DayOpSer_ID = NULL']}; % delete all old values in ColumnToUpdate
     for k_sql = 1 : size(LP2GE_IDs, 1)
