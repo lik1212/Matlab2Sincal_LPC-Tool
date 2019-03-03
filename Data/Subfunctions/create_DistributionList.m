@@ -31,9 +31,9 @@ if isfield(SinInfo, ElementType) && num_Profiles > 0
         otherwise
             error('Unknown Distribution Type.');
     end
-    Dist_List.Load_Profile = Profiles_Names(1:num_Grid_Loads);
+    Dist_List.Profile = Profiles_Names(1:num_Grid_Loads);
 else
     % If no grid loads nor profiles occur
     Dist_List.Grid_Load    = zeros(0);
-    Dist_List.Load_Profile = zeros(0);
+    Dist_List.Profile = zeros(0);
 end
