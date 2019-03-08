@@ -53,6 +53,8 @@ function status = Mat2Sin_LPCalc(Inputs)
 % 		Inputs.waitbar_activ                	(optional)
 % 		Inputs.Temp_Sim_Path                	(optional)
 %
+%       Inputs.slackVoltagePercent              (optional)
+%
 %   Basic Flowchart:
 %
 %       1. Path and directory preparation
@@ -364,6 +366,14 @@ sql_in = {...
     ('UPDATE CalcParameter SET Flag_LC_Incl = 4'             ) ; ... % 1 - Store Results Completely, 4 - Only Marked
     ('DELETE FROM OpSer;'                                    ) ;...  % Delete old load profiles (if they exist) 
     ('DELETE FROM OpSerVal;'                                 )  ...
+    };
+Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
+
+%% Sincal Setup in Infeeder (Voltage of Slack node)
+
+slackVoltagePercent = Settings.slackVoltagePercent;
+sql_in = {...
+    ['UPDATE Infeeder SET u  = ', num2str(slackVoltagePercent)]  ;...
     };
 Matlab2Access_ExecuteSQL(sql_in, DB_Name, DB__PathCopy, DB_Type);
 
